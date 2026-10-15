@@ -1,0 +1,15 @@
+{
+  "name": "void-preinspection-form",
+  "version": "1.0.0",
+  "private": true,
+  "description": "North Star Supported Housing void pre-inspection form: Azure Static Web App + Power Automate",
+  "scripts": {
+    "sync": "node scripts/sync-shared.js",
+    "dev": "npm run sync && node scripts/dev-server.js",
+    "test": "npm run sync && node --test api/test/*.test.js"
+  },
+  "devDependencies": {
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.8.2"
+  }
+}

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Void Pre-Inspection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="northstar-logo.png">
+<style>
+/* North Star brand (Brand Book V1.5), matching the Awaab's Law and Property Services inspection forms. */
+:root{--ink:#06122b;--ocean:#005291;--midnight:#004a77;--azure:#00b9f2;--combat:#00a796;--grass:#a6ce39;--sour:#cbf926;--mint:#00ffce;--sky:#00e1ff;--muted:#46566b;--line:#d5e2ea;--tint:#e9f8f5;--bg:#f2f6f9;--card:#fff;--field:#fff;--fieldline:#9fb6c5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#eef4f8;--ocean:#7fc4ff;--midnight:#a9d8ff;--muted:#a9b8c8;--line:#22324a;--tint:#0d2a2b;--bg:#030a1c;--card:#0a1630;--field:#0d1b38;--fieldline:#3a5272}}
+:root[data-theme="dark"]{--ink:#eef4f8;--ocean:#7fc4ff;--midnight:#a9d8ff;--muted:#a9b8c8;--line:#22324a;--tint:#0d2a2b;--bg:#030a1c;--card:#0a1630;--field:#0d1b38;--fieldline:#3a5272}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Montserrat,Arial,sans-serif}
+.topbar{background:#fff;border-bottom:1px solid #d5e2ea}
+.topbar-inner{max-width:1000px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar img{height:48px;width:auto;display:block}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#005291}
+.hero{background:radial-gradient(120% 140% at 0% 0%,#cbf926 0%,rgba(203,249,38,0) 55%),radial-gradient(120% 140% at 100% 100%,#00e1ff 0%,rgba(0,225,255,0) 60%),#00ffce;color:#06122b}
+.hero-inner{max-width:1000px;margin:0 auto;padding:40px 24px 84px}
+.hero .eyebrow{color:#06122b}
+.hero h1{margin:6px 0 10px;font-size:46px;line-height:1.02;letter-spacing:-.02em}
+.hero h1 b{font-weight:800;display:block}.hero h1 span{font-weight:300;display:block}
+.hero p{max-width:660px;margin:0;font-weight:500}
+main{position:relative;max-width:1000px;margin:-56px auto 40px;padding:0 24px}
+.card{background:var(--card);border-radius:18px;padding:32px;box-shadow:0 10px 30px rgba(6,18,43,.08)}
+h2{font-size:20px;font-weight:700;color:var(--ocean);margin:0 0 10px}h2 .num{font-weight:300;margin-right:6px}
+h3{font-size:17px;font-weight:700;color:var(--ocean);margin:0}
+.card>section{border-top:1px solid var(--line);margin-top:28px;padding-top:20px}.card>section:first-of-type{border-top:0;margin-top:0;padding-top:0}
+label{display:block;margin:10px 0;font-weight:500}
+input[type=text],input[type=date],input[type=email],input[type=number],input[type=search],textarea,select{display:block;width:100%;margin-top:6px;padding:12px 14px;border:1.5px solid var(--fieldline);border-radius:10px;font:inherit;font-weight:400;color:var(--ink);background:var(--field)}
+input:disabled{opacity:.45}
+textarea{min-height:70px;resize:vertical}
+input[type=checkbox],input[type=radio]{width:20px;height:20px;vertical-align:middle;accent-color:#005291;margin:0 8px 0 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.full{grid-column:1/-1}
+.hint{color:var(--muted);font-size:14px}
+#stockLine{margin:0 0 4px;padding:8px 12px;border-radius:8px;background:var(--tint);color:var(--ocean);font-weight:600}
+.q{margin:10px 0}.q>b{display:block;font-weight:500;margin-bottom:6px}
+.ticks{display:flex;flex-wrap:wrap;gap:8px 10px}
+.tick{display:inline-flex;align-items:center;margin:0;padding:9px 16px;border:1.5px solid var(--fieldline);border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;background:var(--field)}
+.tick input{position:absolute;opacity:0;width:1px;height:1px}
+.tick:has(input:checked){border-color:var(--combat);background:var(--tint);color:var(--ocean)}
+.tick:has(input:focus-visible){outline:3px solid #00b9f2;outline-offset:2px}
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin:10px 0}
+.yn .q{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);margin:0}.yn .q>b{margin:0}
+button{padding:13px 22px;border:0;border-radius:999px;background:#005291;color:#fff;font:inherit;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;margin:4px 4px 4px 0}
+button:hover{background:#004a77}button:disabled{opacity:.6;cursor:wait}
+button.ghost{background:transparent;color:var(--ocean);box-shadow:inset 0 0 0 2px var(--ocean)}button.ghost:hover{background:var(--tint)}
+button.small{padding:8px 14px;font-size:12px}
+button.remove{background:transparent;color:#c0392b;box-shadow:inset 0 0 0 2px #e3b7ae;padding:7px 12px;font-size:11px}
+button.primary{background:#cbf926;color:#06122b}button.primary:hover{background:#b9e81a}button.primary::after{content:" >"}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #00b9f2;outline-offset:2px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}td,th{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}th{color:var(--ocean);font-size:13px}
+td.n,th.n{text-align:right;white-space:nowrap}td small{color:var(--muted);display:block;font-size:12px}td input[type=number]{width:84px;margin:0;padding:7px}td input[type=text]{margin:6px 0 0;padding:7px 9px;font-size:13px}
+.works td.cb{width:34px;padding-right:0}.works td.qty{width:120px;white-space:nowrap}.works td.qty span{font-size:12px;color:var(--muted);margin-left:4px}
+.works td label{margin:0;font-weight:600;cursor:pointer}
+.works tr.on{background:var(--tint)}
+.room{border:1.5px solid var(--line);border-radius:16px;margin:14px 0;overflow:hidden}
+.room>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;font-weight:700;color:var(--ocean);font-size:17px}
+.room>summary::-webkit-details-marker{display:none}
+.room>summary::before{content:"▸";margin-right:8px;transition:transform .15s}.room[open]>summary::before{transform:rotate(90deg)}
+.room>summary .name{flex:1}.room>summary .count{font-size:13px;font-weight:600;color:var(--muted)}.room>summary .count.has{color:var(--combat)}
+.room-body{padding:0 18px 16px;border-top:1px solid var(--line)}
+.room-tools{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:8px}
+.extra{margin-top:10px;padding:12px 14px;border:1.5px dashed var(--fieldline);border-radius:12px}
+.sor-row{display:grid;grid-template-columns:1fr 100px auto;gap:0 12px;align-items:end}.sor-row button{margin-bottom:10px}
+.combo{position:relative}
+.results{position:absolute;z-index:20;left:0;right:0;top:100%;margin:2px 0 0;padding:6px;list-style:none;background:var(--card);border:1.5px solid var(--fieldline);border-radius:12px;box-shadow:0 14px 30px rgba(6,18,43,.18);max-height:320px;overflow:auto}
+.results li{padding:8px 12px;border-radius:8px;cursor:pointer}.results li[aria-selected=true],.results li:hover{background:var(--tint)}.results li b{display:block;font-weight:600;font-size:14px}.results li small{color:var(--muted)}.results li.none{cursor:default;color:var(--muted)}
+.photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}.photos figure{margin:0;width:130px}.photos img{width:130px;height:98px;object-fit:cover;border-radius:8px;display:block}
+.filebtn{display:inline-flex;align-items:center;gap:8px;margin:6px 10px 6px 0;padding:9px 15px;border-radius:999px;box-shadow:inset 0 0 0 2px var(--ocean);color:var(--ocean);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}.filebtn input{position:absolute;width:1px;height:1px;opacity:0}
+.addroom{display:grid;grid-template-columns:1fr 220px auto;gap:0 12px;align-items:end;margin-top:6px}.addroom button{margin-bottom:10px}
+.total{padding:12px 16px;margin-top:14px;background:var(--tint);border-left:5px solid #00a796;border-radius:10px;font-weight:700;color:var(--ocean)}
+.noworks{margin:14px 0;padding:12px 16px;border-radius:12px;border:1.5px solid var(--fieldline);font-weight:600}
+.noworks:has(input:checked){border-color:#c29500;background:#fff8db;color:#705400}
+.copybox{margin-top:16px;padding:18px;border-radius:14px;background:#005291;color:#fff}
+.copybox h3{color:#fff}.copybox .hint{color:#d7e7f3}
+.copybox textarea{background:#fff;color:#06122b;border:0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;min-height:180px}
+.copybox button{background:#cbf926;color:#06122b}
+.toolbar{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}
+#notice{font-weight:600;white-space:pre-line}#notice.err{color:#c0392b}#notice.ok{color:#1e8a5a}
+.steps{list-style:none;padding:0;margin:12px 0 0}.steps li{padding:6px 0;font-weight:600}.steps li::before{content:"○ ";color:var(--muted)}.steps li.done::before{content:"✓ ";color:#1e8a5a}.steps li.fail::before{content:"✕ ";color:#c0392b}.steps li.run::before{content:"… ";color:var(--ocean)}
+.steps a{color:var(--ocean)}
+.settings{margin-top:14px;padding:14px 16px;border:1.5px dashed var(--fieldline);border-radius:12px}
+.settings summary{cursor:pointer;font-weight:700;color:var(--ocean)}
+.where{font-size:14px;padding:8px 12px;border-radius:8px;background:var(--tint);display:inline-block;margin-top:6px}
+.folderlist{list-style:none;padding:0;margin:8px 0}.folderlist li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}.folderlist small{color:var(--muted);display:block;word-break:break-all}
+.register td{font-size:13px}.register a{color:var(--ocean)}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#fff8db;color:#705400}
+footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);font-size:12px}
+[hidden]{display:none!important}
+@media(max-width:700px){.hero h1{font-size:34px}.hero-inner{padding:28px 16px 72px}main{padding:0 12px}.card{padding:18px 16px}.grid,.yn,.addroom,.sor-row{grid-template-columns:1fr}.topbar-inner{padding:12px 16px}.topbar img{height:40px}.topbar .eyebrow{display:none}table{font-size:13px}td,th{padding:6px 4px}.room-body{padding:0 10px 12px}.room>summary{padding:12px 12px}.works .val{display:none}.works td.qty{width:96px}td input[type=number]{width:62px}.table-wrap{overflow-x:auto}}
+.topbar .who{margin-left:auto;font-size:13px;color:var(--muted)}.ref{font-size:20px;font-weight:800;color:var(--ocean)}
+</style>
+</head><body>
+<header class="topbar"><div class="topbar-inner"><img src="northstar-logo.png" alt="North Star"><span class="eyebrow">Supported Housing</span><span class="who" id="who"></span></div></header>
+<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you and the officer. The inventory (items to leave or remove) is recorded on a separate sheet.</p></div></div>
+
+<main><div class="card">
+<div id="restore" class="settings" hidden><b>Unsent pre-inspection found on this device.</b> <span id="restoreWhat"></span><br><button type="button" class="small" id="restoreYes">Carry on with it</button><button type="button" class="small ghost" id="restoreNo">Start a new one</button></div>
+
+<section><h2><span class="num">01</span>Property details</h2>
+<div class="grid">
+<label>Supported officer<select id="officer"></select></label>
+<label>Date of inspection<input id="date" type="date"></label>
+<label id="officerOtherWrap" hidden class="full">Officer name<input id="officerOther" type="text" autocomplete="name"></label>
+<div class="combo full"><label>Find the property<input id="propQ" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing the address, postcode or property reference" role="combobox" aria-expanded="false" aria-controls="propRes"></label><ul class="results" id="propRes" hidden role="listbox"></ul></div>
+<p class="hint full" id="stockLine" hidden></p>
+<label class="full">Property address<textarea id="address" rows="2" placeholder="Filled in when you pick the property above, or type it if it isn't listed"></textarea></label>
+<label>Property reference<input id="propRef" type="text" autocomplete="off"></label>
+<label>Property type<input id="propType" type="text" list="propTypes" placeholder="e.g. Flat, room in shared house"></label>
+<label>Void duration<input id="duration" type="text" placeholder="e.g. 5 days"></label>
+<label>Keysafe number<input id="keysafe" type="text" autocomplete="off"></label>
+<label>Access instructions<input id="access" type="text"></label>
+</div>
+<datalist id="propTypes"><option>Flat</option><option>House</option><option>Bungalow</option><option>Bedsit</option><option>Room in shared house</option><option>Maisonette</option></datalist>
+<div class="yn" id="yn"></div>
+<label>Health &amp; safety issues<textarea id="hs" rows="2" placeholder="Anything contractors need to know before going in"></textarea></label>
+<div class="grid">
+<div class="q"><b>Redecoration</b><div class="ticks" data-radio="redec"></div><label id="redecOtherWrap" hidden>Redecoration details<input id="redecOther" type="text"></label></div>
+<div class="q"><b>Colour</b><div class="ticks" data-radio="colour"></div><label id="colourOtherWrap" hidden>Colour<input id="colourOther" type="text"></label></div>
+</div>
+<label>Notes, e.g. best times for the contractor to attend or appointments<textarea id="notes" rows="2"></textarea></label>
+<label>Any works to be completed externally<textarea id="external" rows="2"></textarea></label>
+</section>
+
+<section><h2><span class="num">02</span>Repairs by room</h2>
+<p class="hint">Tick the repairs needed in each room. Items marked m² need the area measured. Anything not on the list can be added from the NHF8 schedule of rates at the bottom of each room. Remove any room the property doesn't have.</p>
+<label class="noworks"><input type="checkbox" id="noWorks">No repairs needed. This void needs no works (for example a room in a shared house), so it can be closed off.</label>
+<div id="rooms"></div>
+<div class="addroom"><label>Add a room<input id="newRoomName" type="text" placeholder="e.g. Bed 3, Dining room, Separate WC"></label><label>Repairs list<select id="newRoomType"><option value="living">Bedroom / living / hall</option><option value="kitchen">Kitchen</option><option value="bathroom">Bathroom / WC</option></select></label><button type="button" class="ghost small" id="addRoom">+ Add room</button></div>
+<div class="total" id="worksTotal"></div>
+<div class="copybox"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h3>SOR codes by room</h3><button type="button" class="small" id="copyAll">Copy all</button></div><p class="hint">Ready to paste into HMS. Each room has its own Copy button too.</p><textarea id="sorText" readonly aria-label="All SOR codes by room"></textarea></div>
+</section>
+
+<div class="toolbar">
+<label>Also email a copy to (optional, comma separated). The supported officer is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
+<button type="button" class="primary" id="submit">Submit pre-inspection</button><button type="button" class="ghost" id="pdfOnly">Download PDF only</button><button type="button" class="ghost" id="reset">New pre-inspection</button>
+<p id="notice" role="status" aria-live="polite"></p>
+<ul class="steps" id="steps" hidden></ul>
+</div>
+</div>
+
+</main>
+<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" form. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines). Values are estimates at NHF8 base rates.</footer>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="preinspection.js"></script>
+<script>
+'use strict';
+let LOGO='',LOGO_R=11.3/54; // logo height / width, read from the image
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'£'+Number(n||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+const ukDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.split('-').reverse().join('/'):(d||'');
+const today=()=>new Date().toLocaleDateString('en-CA');
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
+const MAX_PHOTOS=12;
+const {OFFICERS,YN,CHOICES,ITEMS,DEFAULT_ROOMS}=VPI;
+const officerName=()=>VPI.officerName(S);
+const officerEmail=()=>VPI.officerEmail(S);
+
+// ---- Property list (same list as the Awaab's Law and Property Services forms) ----
+const NOT_HOMES=new Set(['Scheme','Estate','Garage','Garage Block','Office','Playground','Block']);
+let PROPS=[],DETAILS={};
+function findProps(q){const t=q.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);if(!t.length)return[];const out=[];for(const p of PROPS){if(t.every(w=>p.k.includes(w))){out.push(p);if(out.length>=30)break}}return out}
+function stockText(ref){const d=DETAILS[ref];if(!d)return'';const [bed,floor,heat,yr,area]=d;const fl=floor==null?'':floor===0?'ground floor':`floor ${floor}`;return [bed!=null?`${bed} bedroom${bed===1?'':'s'}`:'',heat?`${heat} heating`:'',yr?`built ${yr}`:'',area?`${area} m²`:'',fl].filter(Boolean).join(' · ')}
+
+// ---- SOR catalogue (NHF8 NEW BOOK.xlsx) ----
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+let CAT,SORS=[],SOR_BY_ID=new Map(),BY_CODE=new Map();
+const SYN={toilet:'wc',loo:'wc'};
+function findSors(q){const t=norm(q).split(' ').filter(Boolean).map(w=>SYN[w]||w);if(!t.length)return[];const nq=norm(q).replace(/ /g,'');const out=[];for(const s of SORS){if(t.every(w=>s.words.some(x=>x.startsWith(w))))out.push({s,r:(s.code.toLowerCase()===nq?100:0)+t.reduce((n,w)=>n+(s.subj.some(x=>x.startsWith(w))?3:s.desc.some(x=>x.startsWith(w))?2:0),0)})}out.sort((a,b)=>b.r-a.r||a.s.code.localeCompare(b.s.code,'en',{numeric:true}));return out.slice(0,40).map(x=>x.s)}
+const unitOf=VPI.unitOf,lineValue=VPI.lineValue,qtyText=VPI.qtyText;
+// ---- State ----
+let S=blank(),busy=false;
+function blank(){return{id:uid(),officer:'',officerOther:'',propRef:'',date:today(),address:'',propType:'',duration:'',keysafe:'',access:'',gasCap:'',epc:'',utilities:'',elec:'',pat:'',hs:'',redec:'',redecOther:'',colour:'',colourOther:'',notes:'',external:'',noWorks:false,rooms:DEFAULT_ROOMS.map(([n,t])=>newRoom(n,t)),cc:''}}
+function newRoom(name,type){return{id:uid(),name,type,ticks:{},extra:[],notes:'',photos:[]}}
+const FIELDS=['officer','officerOther','date','address','propRef','propType','duration','keysafe','access','hs','redecOther','colourOther','notes','external','cc'];
+const addr1=()=>VPI.addr1(S.address);
+const lines=r=>VPI.lines(r,CAT);
+
+function paintFields(){$('officer').innerHTML=`<option value="">Select officer…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;
+ $('yn').innerHTML=YN.map(([k,l])=>`<div class="q"><b>${esc(l)}</b><div class="ticks" data-radio="${k}"></div></div>`).join('');
+ document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${v}</label>`).join('')});toggles()}
+function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:''}
+function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOtherWrap').hidden=S.redec!=='Other';$('colourOtherWrap').hidden=S.colour!=='Other'}
+
+function roomHtml(r){const L=lines(r),n=L.length,gen=r.type==='general';
+ return `<details class="room" data-id="${r.id}" open><summary><span class="name">${esc(r.name)}</span><span class="count${n?' has':''}">${n?`${n} repair${n===1?'':'s'}`:'No repairs ticked'}</span></summary><div class="room-body">
+<div class="table-wrap"><table class="works"><thead><tr><th></th><th>Repair <small style="display:inline">(SOR code)</small></th><th>${gen?'Qty':'Qty / m²'}</th><th class="n val">Estimate</th></tr></thead><tbody>
+${ITEMS[r.type].map((it,i)=>{const t=r.ticks[i],on=!!t,s=BY_CODE.get(it.c)||{},fid=`${r.id}-${i}`;return `<tr class="${on?'on':''}"><td class="cb"><input type="checkbox" id="${fid}" data-tick="${i}" ${on?'checked':''}></td><td><label for="${fid}">${esc(it.t)}</label><small>${esc(it.c)} · ${esc(s.description||'')}</small>${gen&&on?`<input type="text" data-tw="${i}" value="${esc(t.where)}" placeholder="Room or external" aria-label="Where: ${esc(it.t)}">`:''}</td><td class="qty"><input type="number" min="0" step="any" data-tq="${i}" value="${on?esc(t.qty):''}" ${on?'':'disabled'} placeholder="${it.sqm?'m²':''}" aria-label="Quantity: ${esc(it.t)}"><span>${it.sqm?'m²':esc(unitOf(s.uom))}</span></td><td class="n val" data-tv="${i}">${on?money(lineValue({rate:s.rate,qty:t.qty})):''}</td></tr>`}).join('')}
+${r.extra.map((e,j)=>`<tr class="on"><td class="cb"><button type="button" class="remove" data-act="removeExtra" data-j="${j}" aria-label="Remove ${esc(e.code)}">✕</button></td><td><label>${esc(e.description)}</label><small>${esc(e.code)} · added from NHF8 book</small></td><td class="qty"><input type="number" min="0" step="any" data-xq="${j}" value="${esc(e.qty)}" aria-label="Quantity"><span>${esc(unitOf(e.uom))}</span></td><td class="n val" data-xv="${j}">${money(lineValue(e))}</td></tr>`).join('')}
+</tbody></table></div>
+<div class="extra"><div class="sor-row"><div class="combo"><label>Add another SOR from the NHF8 book<input type="search" data-sor-q autocomplete="off" spellcheck="false" placeholder="Code or words, e.g. 630521 or toilet pan" role="combobox" aria-expanded="false"></label><ul class="results" data-sor-res hidden role="listbox"></ul></div><label>Quantity<input type="number" data-sor-qty min="0" step="any" value="1"></label><button type="button" class="small" data-act="addExtra">+ Add</button></div></div>
+<label>Notes for ${esc(r.name)}<textarea data-k="notes" rows="2">${esc(r.notes)}</textarea></label>
+<label class="filebtn">Upload photos<input type="file" data-photo accept="image/*" multiple></label><label class="filebtn">Take a photo<input type="file" data-photo accept="image/*" capture="environment"></label>
+<div class="photos">${r.photos.map((p,j)=>`<figure><img src="${p}" alt="${esc(r.name)} photo ${j+1}"><button type="button" class="remove" data-act="removePhoto" data-j="${j}">Remove</button></figure>`).join('')}</div>
+<div class="room-tools"><button type="button" class="ghost small" data-act="copyRoom">Copy SORs</button><button type="button" class="remove" data-act="removeRoom">Remove room</button></div>
+</div></details>`}
+function renderRooms(){$('rooms').innerHTML=S.rooms.map(roomHtml).join('');totals()}
+function renderRoom(r,focusSel){const old=$('rooms').querySelector(`[data-id="${r.id}"]`);const tmp=document.createElement('div');tmp.innerHTML=roomHtml(r);const nu=tmp.firstElementChild;nu.open=old?old.open:true;old?old.replaceWith(nu):$('rooms').append(nu);if(focusSel)nu.querySelector(focusSel)?.focus();totals()}
+function totals(){const all=S.rooms.flatMap(lines),v=all.reduce((a,l)=>a+lineValue(l),0);$('worksTotal').textContent=S.noWorks?'No repairs needed: the report will ask for this void to be closed off.':`${all.length} repair${all.length===1?'':'s'} across ${S.rooms.filter(r=>lines(r).length).length} room${S.rooms.filter(r=>lines(r).length).length===1?'':'s'} · estimated ${money(v)} at NHF8 base rates`;$('sorText').value=sorText();
+ document.querySelectorAll('.room').forEach(d=>{const r=S.rooms.find(x=>x.id===d.dataset.id);if(!r)return;const n=lines(r).length,c=d.querySelector('.count');c.textContent=n?`${n} repair${n===1?'':'s'}`:'No repairs ticked';c.classList.toggle('has',!!n)})}
+function roomSorText(r){return VPI.roomSorText(r,CAT)}
+function sorText(){return VPI.sorText(S,CAT)}
+
+// ---- Events ----
+document.addEventListener('input',e=>{const t=e.target;if(FIELDS.includes(t.id)){S[t.id]=t.value;if(t.id==='address'||t.id==='date')totals();save()}});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='officer'){S.officer=t.value;toggles();save();return}if(t.id==='propRef'){paintStock()}if(t.type==='radio'&&t.closest('[data-radio]')){S[t.name]=t.value;toggles();save()}else if(t.id==='noWorks'){S.noWorks=t.checked;totals();save()}});
+const roomOf=el=>{const d=el.closest('.room');return d&&{div:d,r:S.rooms.find(x=>x.id===d.dataset.id)}};
+$('rooms').addEventListener('input',e=>{const h=roomOf(e.target);if(!h)return;const {r,div}=h,t=e.target;
+ if(t.dataset.k){r[t.dataset.k]=t.value;save()}
+ else if(t.hasAttribute('data-tq')){const i=+t.dataset.tq;if(r.ticks[i]){r.ticks[i].qty=t.value;const s=BY_CODE.get(ITEMS[r.type][i].c)||{};div.querySelector(`[data-tv="${i}"]`).textContent=money(lineValue({rate:s.rate,qty:t.value}));totals();save()}}
+ else if(t.hasAttribute('data-tw')){const i=+t.dataset.tw;if(r.ticks[i]){r.ticks[i].where=t.value;totals();save()}}
+ else if(t.hasAttribute('data-xq')){const j=+t.dataset.xq;r.extra[j].qty=t.value;div.querySelector(`[data-xv="${j}"]`).textContent=money(lineValue(r.extra[j]));totals();save()}
+ else if(t.hasAttribute('data-sor-q'))showSors(div)});
+$('rooms').addEventListener('change',async e=>{const h=roomOf(e.target);if(!h)return;const {r}=h,t=e.target;
+ if(t.hasAttribute('data-tick')){const i=+t.dataset.tick,it=ITEMS[r.type][i];if(t.checked)r.ticks[i]={qty:it.sqm?'':String(it.q||1),where:''};else delete r.ticks[i];renderRoom(r,t.checked?(it.sqm?`[data-tq="${i}"]`:(r.type==='general'?`[data-tw="${i}"]`:`#${CSS.escape(t.id)}`)):`#${CSS.escape(t.id)}`);save()}
+ else if(t.hasAttribute('data-photo')){const files=[...t.files],have=S.rooms.reduce((n,x)=>n+x.photos.length,0);if(have+files.length>MAX_PHOTOS){say(`Up to ${MAX_PHOTOS} photos per pre-inspection, so the report stays small enough to save and email.`,'err');return}say('Adding photos…');try{for(const f of files)r.photos.push(await shrink(f));say('');renderRoom(r);save()}catch(err){say('Photo could not be added: '+err.message,'err')}}});
+$('rooms').addEventListener('click',e=>{const b=e.target.closest('button[data-act]');if(!b)return;const {r,div}=roomOf(b),j=+b.dataset.j;
+ switch(b.dataset.act){
+ case'addExtra':{const q=div.querySelector('[data-sor-q]'),s=SOR_BY_ID.get(q.dataset.picked);if(!s){say('Search for a SOR and pick it from the list first.','err');q.focus();return}const qty=Number(div.querySelector('[data-sor-qty]').value);if(!(qty>0)){say('Enter a quantity greater than zero.','err');return}r.extra.push({id:s.id,code:s.code,description:s.description,uom:s.uom,rate:s.rate,qty:String(qty)});say('');renderRoom(r,'[data-sor-q]');save();return}
+ case'removeExtra':r.extra.splice(j,1);break;
+ case'removePhoto':r.photos.splice(j,1);break;
+ case'removeRoom':{if((lines(r).length||r.photos.length||r.notes.trim())&&!confirm(`Remove ${r.name} and its ticked repairs, notes and photos?`))return;S.rooms=S.rooms.filter(x=>x!==r);div.remove();totals();save();return}
+ case'copyRoom':copy(roomSorText(r),b);return}
+ renderRoom(r);save()});
+function showSors(div,keep){const q=div.querySelector('[data-sor-q]'),list=div.querySelector('[data-sor-res]');if(!keep)q.dataset.picked='';const hits=findSors(q.value);q._hits=hits;q._cur=-1;if(!q.value.trim()){list.hidden=true;return}list.innerHTML=hits.length?hits.map((s,i)=>`<li role="option" data-i="${i}"><b>${esc(s.code)} · ${esc(s.description)}</b><small>${esc(s.element)} · ${esc(s.subsection)} · ${esc(unitOf(s.uom))} · ${money(s.rate)}</small></li>`).join(''):'<li class="none">No matching SORs. Try fewer words or the code.</li>';list.hidden=false;q.setAttribute('aria-expanded','true')}
+function pickSor(div,s){const q=div.querySelector('[data-sor-q]');q.value=s.code+' · '+s.description;q.dataset.picked=s.id;div.querySelector('[data-sor-res]').hidden=true;q.setAttribute('aria-expanded','false');const n=div.querySelector('[data-sor-qty]');n.focus();n.select()}
+$('rooms').addEventListener('mousedown',e=>{const li=e.target.closest('[data-sor-res] li[data-i]');if(!li)return;e.preventDefault();const div=li.closest('.room');pickSor(div,div.querySelector('[data-sor-q]')._hits[+li.dataset.i])});
+$('rooms').addEventListener('keydown',e=>{const q=e.target;if(!q.hasAttribute('data-sor-q'))return;const div=q.closest('.room'),list=div.querySelector('[data-sor-res]'),hits=q._hits||[];
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(list.hidden)showSors(div,true);if(!hits.length)return;q._cur=((q._cur??-1)+(e.key==='ArrowDown'?1:-1)+hits.length)%hits.length;[...list.children].forEach((li,i)=>li.setAttribute('aria-selected',String(i===q._cur)));list.children[q._cur].scrollIntoView({block:'nearest'})}
+ else if(e.key==='Enter'){e.preventDefault();if(!list.hidden&&hits.length)pickSor(div,hits[Math.max(q._cur,0)])}else if(e.key==='Escape')list.hidden=true});
+$('rooms').addEventListener('focusout',e=>{if(e.target.hasAttribute('data-sor-q')){const l=e.target.closest('.room').querySelector('[data-sor-res]');setTimeout(()=>l.hidden=true,150)}});
+$('addRoom').onclick=()=>{const n=$('newRoomName').value.trim();if(!n){say('Give the new room a name, e.g. Bed 3.','err');$('newRoomName').focus();return}const r=newRoom(n,$('newRoomType').value);const gi=S.rooms.findIndex(x=>x.type==='general');gi<0?S.rooms.push(r):S.rooms.splice(gi,0,r);$('newRoomName').value='';say('');renderRooms();save();$('rooms').querySelector(`[data-id="${r.id}"] summary`).focus()};
+$('copyAll').onclick=e=>copy(sorText(),e.currentTarget);
+async function copy(text,btn){let ok=false;try{await navigator.clipboard.writeText(text);ok=true}catch{const t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();try{ok=document.execCommand('copy')}catch{}t.remove()}const old=btn.textContent;btn.textContent=ok?'Copied ✓':'Press Ctrl+C';if(!ok){$('sorText').focus();$('sorText').select()}setTimeout(()=>btn.textContent=old,2500)}
+async function shrink(file){if(!file.type.startsWith('image/'))throw Error('Please choose an image.');const url=URL.createObjectURL(file);try{const im=new Image();im.src=url;await im.decode();const k=Math.min(1,1100/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}catch{throw Error('Use a JPEG or PNG photo your browser can open.')}finally{URL.revokeObjectURL(url)}}
+
+// ---- Property search ----
+let propHits=[],propCur=-1;
+function showProps(){const q=$('propQ').value,l=$('propRes');propHits=findProps(q);propCur=-1;if(!q.trim()){l.hidden=true;$('propQ').setAttribute('aria-expanded','false');return}l.innerHTML=propHits.length?propHits.map((p,i)=>`<li role="option" data-i="${i}"><b>${esc(p.address)}</b><small>${esc(p.ref)} · ${esc(p.type)}</small></li>`).join(''):'<li class="none">No match. Try the postcode or fewer words, or type the address below.</li>';l.hidden=false;$('propQ').setAttribute('aria-expanded','true')}
+function pickProp(p){S.address=p.address;S.propRef=p.ref;S.propType=p.type;['address','propRef','propType'].forEach(k=>$(k).value=S[k]);$('propQ').value='';$('propRes').hidden=true;$('propQ').setAttribute('aria-expanded','false');paintStock();fitBedrooms(p.ref);totals();save()}
+// Match the bedroom rooms to the stock record, leaving any room that already has entries.
+function fitBedrooms(ref){const n=DETAILS[ref]?.[0];if(!(n>=1&&n<=8))return;const isBed=r=>/^Bed \d+$/.test(r.name)&&r.type==='living',used=r=>lines(r).length||r.photos.length||r.notes.trim();
+ S.rooms=S.rooms.filter(r=>!isBed(r)||+r.name.slice(4)<=n||used(r));const at=Math.max(0,S.rooms.findIndex(r=>!isBed(r)));let k=0;for(let i=1;i<=n;i++)if(!S.rooms.some(r=>r.name==='Bed '+i)){S.rooms.splice(at+k,0,newRoom('Bed '+i,'living'));k++}
+ S.rooms=[...S.rooms.filter(isBed).sort((a,b)=>+a.name.slice(4)-+b.name.slice(4)),...S.rooms.filter(r=>!isBed(r))];renderRooms()}
+$('propQ').addEventListener('input',showProps);
+$('propRes').addEventListener('mousedown',e=>{const li=e.target.closest('li[data-i]');if(!li)return;e.preventDefault();pickProp(propHits[+li.dataset.i])});
+$('propQ').addEventListener('keydown',e=>{const l=$('propRes');if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!propHits.length)return;propCur=(propCur+(e.key==='ArrowDown'?1:-1)+propHits.length)%propHits.length;[...l.children].forEach((li,i)=>li.setAttribute('aria-selected',String(i===propCur)));l.children[propCur].scrollIntoView({block:'nearest'})}else if(e.key==='Enter'){e.preventDefault();if(propHits.length)pickProp(propHits[Math.max(propCur,0)])}else if(e.key==='Escape')l.hidden=true});
+$('propQ').addEventListener('focusout',()=>setTimeout(()=>$('propRes').hidden=true,150));
+
+// ---- Draft on this device ----
+const DRAFT='ns-void-preinspection-draft';let saveT;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const d={...S,savedAt:new Date().toISOString()};store.set(DRAFT,d);if(!store.get(DRAFT))store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))})},500)}
+function load(d){S={...blank(),...d};paintFields();renderRooms()}
+$('reset').onclick=()=>{if(!confirm('Start a new pre-inspection? Anything not submitted will be cleared.'))return;store.del(DRAFT);S=blank();paintFields();renderRooms();$('steps').hidden=true;say('');window.scrollTo({top:0,behavior:'smooth'})};
+
+// ---- Validation ----
+function say(t,cls){const n=$('notice');n.textContent=t;n.className=cls||''}
+function valid(){
+ if(!officerName()){say('Choose the supported officer.','err');$(S.officer==='Other'?'officerOther':'officer').focus();return false}
+ const need=[['date','Enter the date of inspection.'],['address','Enter the property address.']];for(const [k,m] of need)if(!String(S[k]).trim()){say(m,'err');$(k).focus();return false}
+ const yn=YN.find(([k])=>!S[k]);if(yn){say(`Answer Yes or No for "${yn[1]}".`,'err');document.querySelector(`[data-radio="${yn[0]}"]`).scrollIntoView({block:'center'});return false}
+ if(!S.redec){say('Choose the redecoration: full, part or other.','err');document.querySelector('[data-radio="redec"]').scrollIntoView({block:'center'});return false}
+ if(S.redec==='Other'&&!S.redecOther.trim()){say('Describe the redecoration for "Other".','err');$('redecOther').focus();return false}
+ if(S.colour==='Other'&&!S.colourOther.trim()){say('Give the colour for "Other".','err');$('colourOther').focus();return false}
+ if(S.noWorks)return true;
+ for(const r of S.rooms)for(const l of lines(r))if(!(Number(l.qty)>0)){say(`${r.name}: enter the ${l.sqm?'area in m²':'quantity'} for "${l.label}".`,'err');const d=$('rooms').querySelector(`[data-id="${r.id}"]`);d.open=true;d.scrollIntoView({block:'center'});return false}
+ if(!S.rooms.some(r=>lines(r).length)){say('Tick at least one repair, or tick "No repairs needed" if this void needs no works.','err');$('noWorks').scrollIntoView({block:'center'});return false}
+ return true}
+
+// ---- PDF report ----
+const OCEAN=[0,82,145],INK=[6,18,43],MUTED=[70,86,107],MINT=[0,255,206],SOUR=[203,249,38],COMBAT=[0,167,150];
+const safe=s=>String(s).replace(/[\\/:*?"<>|#%]+/g,' ').trim();
+function fileBase(){return `${safe(addr1()||'Property').slice(0,60)} - Void Pre-Inspection - ${ukDate(S.date).replace(/\//g,'-')}`}
+const choice=(k,o)=>VPI.choice(S,k,o);
+function buildPdf(q){
+ const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});const W=210,ML=14,MR=14,CW=W-ML-MR;
+ const footer=()=>{const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(...MUTED);doc.text(`North Star Housing Group · Void pre-inspection · ${addr1()} · ${ukDate(S.date)}`,ML,290);doc.text(`Page ${i} of ${n}`,W-MR,290,{align:'right'})}};
+ doc.setFillColor(...MINT);doc.rect(0,0,W,34,'F');doc.setFillColor(...SOUR);doc.triangle(0,0,70,0,0,34,'F');
+ doc.setFillColor(255,255,255);doc.roundedRect(ML-2,7,58,16,3,3,'F');doc.addImage(LOGO,'PNG',ML,9+(11.3-Math.min(11.3,54*LOGO_R))/2,Math.min(54,11.3/LOGO_R),Math.min(11.3,54*LOGO_R));
+ doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('Void Pre-Inspection',W-MR,17,{align:'right'});
+ doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('Supported Housing · Voids',W-MR,24,{align:'right'});
+ let y=42;
+ const all=S.rooms.flatMap(lines),grand=all.reduce((a,l)=>a+lineValue(l),0);
+ const [bg,fg,msg]=S.noWorks?[[255,248,219],[112,84,0],'No repairs needed: please close off this void']:[[233,248,245],OCEAN,`${all.length} repair${all.length===1?'':'s'} · estimated ${money(grand)} at NHF8 base rates`];
+ doc.setFillColor(...bg);doc.roundedRect(ML,y,CW,12,3,3,'F');doc.setTextColor(...fg);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(msg,ML+4,y+8);y+=17;
+ const T=(opts)=>{doc.autoTable({margin:{left:ML,right:MR},styles:{font:'helvetica',fontSize:9,cellPadding:2.2,textColor:INK,lineColor:[213,226,234],lineWidth:.2},headStyles:{fillColor:OCEAN,textColor:255,fontStyle:'bold'},...opts});y=doc.lastAutoTable.finalY+6};
+ const H=t=>{if(y>262){doc.addPage();y=18}doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,ML,y);doc.setDrawColor(...COMBAT);doc.setLineWidth(.8);doc.line(ML,y+1.8,ML+18,y+1.8);y+=5};
+ const K={fontStyle:'bold',cellWidth:44,textColor:OCEAN};
+ H('Property details');
+ T({startY:y,theme:'grid',body:[['Supported officer',officerName(),'Date',ukDate(S.date)],['Address',{content:S.address.replace(/\s*\n\s*/g,', '),colSpan:3}],['Property reference',S.propRef||'—','Stock record',stockText(S.propRef)||'—'],['Property type',S.propType||'—','Void duration',S.duration||'—'],['Keysafe number',S.keysafe||'—','Access',S.access||'—'],...[[0,1],[2,3]].map(([a,b])=>[YN[a][1],S[YN[a][0]],YN[b][1],S[YN[b][0]]]),[YN[4][1],S[YN[4][0]],'',''],['Redecoration',choice('redec','redecOther'),'Colour',choice('colour','colourOther')],['H&S issues',{content:S.hs||'None recorded',colSpan:3}],['Notes / appointments',{content:S.notes||'—',colSpan:3}],['External works',{content:S.external||'—',colSpan:3}]],columnStyles:{0:K,2:{fontStyle:'bold',cellWidth:40,textColor:OCEAN}}});
+ H('Repairs by room');
+ if(S.noWorks){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.text('No repairs needed. The officer has marked this void as needing no works so it can be closed off.',ML,y+3);y+=10}
+ for(const r of S.rooms){const L=lines(r);if(!L.length&&!r.notes.trim()&&!r.photos.length)continue;if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(r.name,ML,y+1);y+=3;
+  const sub=L.reduce((a,l)=>a+lineValue(l),0);
+  if(L.length)T({startY:y,head:[['SOR','Repair','Qty','Unit','Estimate']],body:[...L.map(l=>[l.code,l.label+(l.where?` (${l.where})`:'')+(l.extra?'':`\n${l.description}`),String(l.qty),unitOf(l.uom),money(lineValue(l))]),[{content:'Room total',colSpan:4,styles:{fontStyle:'bold',halign:'right'}},{content:money(sub),styles:{fontStyle:'bold'}}]],columnStyles:{0:{cellWidth:18,fontStyle:'bold'},2:{cellWidth:13,halign:'right'},3:{cellWidth:13},4:{cellWidth:24,halign:'right'}},didParseCell:d=>{if(d.section==='body'&&d.column.index===1&&typeof d.cell.raw==='string'&&d.cell.raw.includes('\n'))d.cell.styles.fontSize=8.5}});
+  else{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);doc.text('No repairs ticked.',ML,y+4);y+=9}
+  if(r.notes.trim()){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...INK);const ls=doc.splitTextToSize('Notes: '+r.notes,CW);if(y+ls.length*4>280){doc.addPage();y=18}doc.text(ls,ML,y);y+=ls.length*4+3}
+  if(r.photos.length){let x=ML;const pw=58,ph=43.5;for(const p of r.photos){if(x+pw>W-MR+0.1){x=ML;y+=ph+3}if(y+ph>282){doc.addPage();y=18;x=ML}doc.addImage(q<1?recompress(p,q):p,'JPEG',x,y,pw,ph,undefined,'FAST');x+=pw+4}y+=ph+6}}
+ const empty=S.rooms.filter(r=>!lines(r).length).map(r=>r.name);
+ if(!S.noWorks&&empty.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);const ls=doc.splitTextToSize('No repairs ticked in: '+empty.join(', ')+'.',CW);if(y+ls.length*4>280){doc.addPage();y=18}doc.text(ls,ML,y);y+=ls.length*4+4}
+ if(!S.noWorks){doc.setFillColor(233,248,245);if(y>270){doc.addPage();y=18}doc.roundedRect(ML,y,CW,10,2,2,'F');doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(`Estimated value of repairs: ${money(grand)} at NHF8 base rates`,ML+4,y+6.5);y+=16}
+ doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(...MUTED);if(y>282){doc.addPage();y=18}doc.text('The inventory (items to leave or remove) is recorded on a separate sheet.',ML,y);
+ footer();return doc}
+const RC=new Map();const recompress=(src,q)=>RC.get(src+':'+q)||src;
+async function prepare(q){for(const p of S.rooms.flatMap(r=>r.photos)){const k=p+':'+q;if(q>=1||RC.has(k))continue;const im=new Image();im.src=p;await im.decode().catch(()=>{});const s=q<.5?.7:1,c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*s));c.height=Math.max(1,Math.round(im.naturalHeight*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);RC.set(k,c.toDataURL('image/jpeg',q))}}
+// Shrinks the photos step by step until the PDF fits the limit.
+async function makePdf(limit){let doc,bytes;for(const q of [1,.55,.4,.28]){await prepare(q);doc=buildPdf(q);bytes=doc.output('arraybuffer');if(bytes.byteLength<=limit)break}return{doc,bytes}}
+const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+
+// ---- Signed-in user (Azure Static Web Apps, Entra ID) ----
+async function whoAmI(){try{const r=await fetch('/.auth/me',{cache:'no-store'});const j=await r.json();const p=j.clientPrincipal;if(!p)return;const name=(p.claims||[]).find(c=>c.typ==='name')?.val||p.userDetails;$('who').textContent='Signed in as '+name}catch{}}
+
+// ---- Submit ----
+function stepUi(names){const ul=$('steps');ul.hidden=false;ul.innerHTML=names.map((n,i)=>`<li id="st${i}">${n}</li>`).join('');return(i,state,html)=>{const li=$('st'+i);li.className=state;if(html)li.innerHTML=html}}
+// The PDF travels to the server as base64; keep it well under the request limits.
+const PDF_LIMIT=6e6;
+function payload(){return{...S,officerName:officerName(),stockRecord:S.propRef?stockText(S.propRef):'',rooms:S.rooms.map(r=>({id:r.id,name:r.name,type:r.type,ticks:r.ticks,extra:r.extra,notes:r.notes,photoCount:r.photos.length}))}}
+async function doSubmit(){if(busy||!valid())return;busy=true;const btn=$('submit');btn.disabled=true;say('');
+ const mark=stepUi(['Create the PDF report','Save it to SharePoint and email it','Download a copy to this device']);
+ try{
+  mark(0,'run');const pdf=await makePdf(PDF_LIMIT);if(pdf.bytes.byteLength>PDF_LIMIT){mark(0,'fail','The report is too large. Remove some photos and submit again.');say('The report is too large to send.','err');return}
+  mark(0,'done',`PDF report created (${Math.round(pdf.bytes.byteLength/1024)} KB)`);
+  const name=fileBase()+'.pdf';
+  mark(1,'run');
+  let res,body={};
+  try{res=await fetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({form:payload(),pdfBase64:b64(pdf.bytes)})});body=await res.json().catch(()=>({}))}
+  catch{mark(1,'fail','Could not reach the server. Check your connection and submit again.');say('Not submitted. Your entries are still here.','err');return}
+  if(res.status===401||res.status===403){mark(1,'fail','Your sign-in has expired. Reload the page to sign in again, then submit.');say('Not submitted. Your entries are still here.','err');return}
+  if(!res.ok){mark(1,'fail',esc(body.error||`The server refused the report (${res.status}).`));say('Not submitted. Your entries are still here.','err');return}
+  mark(1,'done',`Saved and emailed. Reference <span class="ref">${esc(body.reference)}</span>`);
+  mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
+  say(`Pre-inspection ${body.reference} submitted. The report is in SharePoint and in your inbox. Start the next one with "New pre-inspection".`,'ok');store.del(DRAFT)
+ }catch(e){say('Could not create the report: '+(e.message||e),'err')}
+ finally{busy=false;btn.disabled=false}}
+function offerDownload(bytes,name,cb){try{const u=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);cb({state:'done',html:'PDF downloaded to this device'})}catch{cb({state:'fail',html:'PDF download not available here'})}}
+$('submit').onclick=doSubmit;
+$('pdfOnly').onclick=async()=>{if(busy)return;busy=true;say('Creating the PDF…');try{const {bytes}=await makePdf(5e7);offerDownload(bytes,fileBase()+'.pdf',i=>say(i.html,i.state==='fail'?'err':'ok'))}catch(e){say('Could not create the PDF: '+(e.message||e),'err')}finally{busy=false}};
+
+// ---- Start: load the SOR book, property list and logo, then draw the form ----
+const toDataUrl=blob=>new Promise((ok,no)=>{const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=no;f.readAsDataURL(blob)});
+(async()=>{
+ whoAmI();
+ try{
+  const get=async u=>{const r=await fetch(u);if(!r.ok)throw Error(u+' '+r.status);return r};
+  const [sr,pr,dr,lr]=await Promise.all(['sors.json','properties.json','property-details.json','northstar-logo.png'].map(get));
+  const raw=await sr.json();CAT=VPI.catalogue(raw);
+  SORS=CAT.list.map(s=>({...s,words:norm(s.code+' '+s.description+' '+s.element+' '+s.section+' '+s.subsection).split(' '),subj:norm(s.description.split(':')[0]).split(' '),desc:norm(s.description).split(' ')}));
+  SOR_BY_ID=new Map(SORS.map(s=>[s.id,s]));BY_CODE=new Map();SORS.forEach(s=>{if(!BY_CODE.has(s.code))BY_CODE.set(s.code,s)});
+  $('sorCount').textContent=SORS.length.toLocaleString('en-GB');
+  PROPS=(await pr.json()).properties.filter(p=>!NOT_HOMES.has(p[2])).map(([ref,address,type])=>({ref,address,type,k:(ref+' '+address).toLowerCase().replace(/[^a-z0-9]+/g,' ')}));
+  DETAILS=(await dr.json()).details;
+  LOGO=await toDataUrl(await lr.blob());
+  {const im=new Image();im.src=LOGO;await im.decode().catch(()=>{});if(im.naturalWidth)LOGO_R=im.naturalHeight/im.naturalWidth}
+ }catch(e){say('The form could not load its data ('+(e.message||e)+'). Reload the page.','err');return}
+ paintFields();renderRooms();const d=store.get(DRAFT);if(d&&d.rooms&&(d.officer||d.address||d.rooms.some(r=>Object.keys(r.ticks||{}).length||r.extra?.length))){$('restoreWhat').textContent=`${(d.address||'No address').split(/\n|,/)[0]} · last changed ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true};$('restoreNo').onclick=()=>{store.del(DRAFT);$('restore').hidden=true}}
+})();
+</script>
+</body></html>

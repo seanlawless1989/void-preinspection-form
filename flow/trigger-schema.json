@@ -1,0 +1,84 @@
+{
+ "type": "object",
+ "properties": {
+  "reference": { "type": "string" },
+  "submissionId": { "type": "string" },
+  "submittedAt": { "type": "string" },
+  "submittedByName": { "type": "string" },
+  "submittedByEmail": { "type": "string" },
+  "address": { "type": "string" },
+  "propRef": { "type": "string" },
+  "recordFileName": { "type": "string" },
+  "pdfBase64": { "type": "string" },
+  "emailTo": { "type": "string" },
+  "emailCc": { "type": "string" },
+  "emailSubject": { "type": "string" },
+  "emailHtml": { "type": "string" },
+  "noWorks": { "type": "boolean" },
+  "worksValue": { "type": "number" },
+  "sharepointItem": {
+   "type": "object",
+   "properties": {
+    "Title": { "type": "string" },
+    "SubmittedAt": { "type": "string" },
+    "InspectionDate": { "type": "string" },
+    "Officer": { "type": "string" },
+    "OfficerEmail": { "type": "string" },
+    "Address": { "type": "string" },
+    "PropertyRef": { "type": "string" },
+    "PropertyType": { "type": "string" },
+    "StockRecord": { "type": "string" },
+    "VoidDuration": { "type": "string" },
+    "Keysafe": { "type": "string" },
+    "Access": { "type": "string" },
+    "GasCap": { "type": "string" },
+    "EPCRequired": { "type": "string" },
+    "UtilitiesSwap": { "type": "string" },
+    "ElectricOn": { "type": "string" },
+    "WhiteGoodsPAT": { "type": "string" },
+    "Redecoration": { "type": "string" },
+    "Colour": { "type": "string" },
+    "HSIssues": { "type": "string" },
+    "Notes": { "type": "string" },
+    "ExternalWorks": { "type": "string" },
+    "SORText": { "type": "string" },
+    "SubmittedBy": { "type": "string" },
+    "SubmittedByEmail": { "type": "string" },
+    "SubmissionId": { "type": "string" },
+    "NoWorks": { "type": "boolean" },
+    "WorksCount": { "type": "number" },
+    "WorksValue": { "type": "number" },
+    "PhotoCount": { "type": "number" }
+   }
+  },
+  "worksItems": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "Title": { "type": "string" },
+     "Room": { "type": "string" },
+     "SORCode": { "type": "string" },
+     "Repair": { "type": "string" },
+     "SORDescription": { "type": "string" },
+     "Where": { "type": "string" },
+     "UOM": { "type": "string" },
+     "Quantity": { "type": "number" },
+     "Rate": { "type": "number" },
+     "LineValue": { "type": "number" },
+     "AddedFromBook": { "type": "boolean" }
+    }
+   }
+  }
+ },
+ "required": [
+  "reference",
+  "recordFileName",
+  "pdfBase64",
+  "sharepointItem",
+  "worksItems",
+  "emailTo",
+  "emailSubject",
+  "emailHtml"
+ ]
+}
