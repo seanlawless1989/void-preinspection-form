@@ -85,6 +85,7 @@ test('inventory is optional and left out when not switched on', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.sent.hasInventory, false);
   assert.equal(r.sent.inventoryText, '');
+  assert.deepEqual(r.sent.inventoryItems, []);
   assert.match(r.sent.emailHtml, /No inventory was completed/);
   assert.ok(!('Inventory' in r.sent.sharepointItem), 'list rows are unchanged so the existing SharePoint list keeps working');
 });
@@ -105,6 +106,9 @@ test('inventory is cleaned, summarised and added to the email', async () => {
   assert.match(r.sent.inventoryText, /Access instructions: Keysafe 1234/);
   assert.match(r.sent.emailHtml, /Inventory/);
   assert.match(r.sent.emailHtml, /Skip needed/);
+  assert.equal(r.sent.inventoryItems.length, 3);
+  const cooker = r.sent.inventoryItems.find(i => i.Item === 'Cooker');
+  assert.deepEqual({ ...cooker }, { Title: r.sent.reference, Room: 'Kitchen', Item: 'Cooker', Decision: 'Remove', Clean: true, Address: 'WEBB HOUSE, Flat 3, 7 Zetland Road, Middlesbrough, TS1 1EH', PropertyRef: 'ZETL0200703', AccessInstructions: 'Keysafe 1234', ClearanceInstructions: 'Skip needed' });
 });
 
 test('inventory works on a no-works void and is validated when switched on', async () => {

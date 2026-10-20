@@ -47,6 +47,10 @@ Settings → Concurrency control on, degree **20**. Inside it, one **Send an HTT
 
 A no-works void sends an empty array, so this step does nothing for it.
 
+## 5b. Apply to each: `triggerBody()?['inventoryItems']` (optional inventory)
+
+Same as step 5 but Uri `_api/web/lists/getbytitle('Void Pre-Inspection Inventory')/items`, Body `item()`. Add it straight after step 5. It does nothing when no inventory was completed (empty array).
+
 ## 6. Get file content (SharePoint)
 
 * Site Address: `<SITE>`, File Identifier: `body('Create_file')?['Id']`

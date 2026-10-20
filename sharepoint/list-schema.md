@@ -62,6 +62,22 @@ One row per SOR line, so the works can be filtered and totalled in Power BI or E
 | LineValue | Currency (£) |
 | AddedFromBook | Yes/No |
 
+## List: Void Pre-Inspection Inventory
+
+One row per inventory item, only when the optional inventory is completed. Title holds the reference, which links back to the Void Pre-Inspections row. The access and clearance instructions repeat on each row so the list can be filtered on its own.
+
+| Column | Type |
+|---|---|
+| Title | Single line (built in), reference |
+| Room | Single line |
+| Item | Single line |
+| Decision | Single line: Stay, Remove, or blank (Clean only) |
+| Clean | Yes/No |
+| Address | Multiple lines (plain) |
+| PropertyRef | Single line |
+| AccessInstructions | Multiple lines (plain) |
+| ClearanceInstructions | Multiple lines (plain) |
+
 ## Permissions
 
-Break inheritance on both lists and the library and give access to the owners plus whoever reviews voids (for example the Supported Housing team managers and the voids team). Staff using the form do not need access to these lists: the flow writes as its owner, and they get their copy by email. The flow owner needs Edit on all three.
+Break inheritance on all three lists and the library and give access to the owners plus whoever reviews voids (for example the Supported Housing team managers and the voids team). Staff using the form do not need access to these lists: the flow writes as its owner, and they get their copy by email. The flow owner needs Edit on all four.

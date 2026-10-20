@@ -187,6 +187,41 @@
   },
   "inventoryText": {
    "type": "string"
+  },
+  "inventoryItems": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "Title": {
+      "type": "string"
+     },
+     "Room": {
+      "type": "string"
+     },
+     "Item": {
+      "type": "string"
+     },
+     "Decision": {
+      "type": "string"
+     },
+     "Address": {
+      "type": "string"
+     },
+     "PropertyRef": {
+      "type": "string"
+     },
+     "AccessInstructions": {
+      "type": "string"
+     },
+     "ClearanceInstructions": {
+      "type": "string"
+     },
+     "Clean": {
+      "type": "boolean"
+     }
+    }
+   }
   }
  },
  "required": [

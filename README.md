@@ -4,7 +4,7 @@ North Star's Supported Housing void pre-inspection, built from Laurie Edmondson'
 
 * creates a branded PDF report in the browser (photos included) and downloads a copy;
 * saves the PDF to the **Void Pre-Inspection Records** SharePoint library;
-* adds a row to the **Void Pre-Inspections** list and one row per SOR to **Void Pre-Inspection Works**;
+* adds a row to the **Void Pre-Inspections** list, one row per SOR to **Void Pre-Inspection Works** and, if an inventory was completed, one row per item to **Void Pre-Inspection Inventory**;
 * emails the person who submitted it, CC the supported officer, with the PDF attached and the SOR codes by room ready to paste into HMS.
 
 It follows the same pattern as the Awaab's Law and Property Services inspection forms: Azure Static Web App with Entra sign-in, one Azure Function, and a Power Automate flow.
@@ -62,4 +62,4 @@ npm run dev     # http://localhost:4280, signed in as a fake user; submissions g
 
 ## Not included yet
 
-Nothing outstanding from the paper forms. The optional **Inventory** section (from the paper "Property Inventory" sheet) is on the form: staff tick Stay / Remove / Clean per item, add free-text furniture and other items, and give access and clearance instructions. It appears in the PDF and the email, and the payload carries `hasInventory` and `inventoryText` for the flow. The SharePoint list is unchanged; to keep the inventory as list data, add a multi-line column (for example `InventoryText`) and add it to `sharepointItem` in `api/src/lib/handleSubmit.js`.
+Nothing outstanding from the paper forms. The optional **Inventory** section (from the paper "Property Inventory" sheet) is on the form: staff tick Stay / Remove / Clean per item, add free-text furniture and other items, and give access and clearance instructions. It appears in the PDF and the email, and the payload carries `hasInventory` and `inventoryText` for the flow. It is also saved to the **Void Pre-Inspection Inventory** SharePoint list, one row per item (see `sharepoint/list-schema.md` and step 5b in `flow/README.md`).

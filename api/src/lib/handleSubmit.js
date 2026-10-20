@@ -155,6 +155,10 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     works.push({ Title: ref, Room: r.name, SORCode: l.code, Repair: l.label, SORDescription: l.description, Where: l.where, UOM: l.uom, Quantity: q, Rate: l.rate, LineValue: VPI.lineValue({ rate: l.rate, qty: q }), AddedFromBook: !!l.extra });
   }
   if (f.noWorks) works.length = 0;
+  const inventoryItems = VPI.invRows(f.inventory).map(r => ({
+    Title: ref, Room: r.room, Item: r.item, Decision: r.act === 'stay' ? 'Stay' : r.act === 'remove' ? 'Remove' : '', Clean: r.clean,
+    Address: f.address.replace(/\s*\n\s*/g, ', '), PropertyRef: f.propRef, AccessInstructions: f.inventory.access, ClearanceInstructions: f.inventory.clearance,
+  }));
   const total = Math.round(works.reduce((a, w) => a + w.LineValue, 0) * 100) / 100;
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
@@ -203,6 +207,7 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
       SubmissionId: f.id || ref,
     },
     worksItems: works,
+    inventoryItems,
     hasInventory: f.inventory.on,
     inventoryText: VPI.inventoryText(f),
     emailTo: user.email,
