@@ -83,7 +83,8 @@ td.n,th.n{text-align:right;white-space:nowrap}td small{color:var(--muted);displa
 .copybox textarea{background:#fff;color:#06122b;border:0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;min-height:180px}
 .copybox button{background:#cbf926;color:#06122b}
 .toolbar{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}
-#notice{font-weight:600;white-space:pre-line}#notice.err{color:#c0392b}#notice.ok{color:#1e8a5a}
+#notice{font-weight:600;white-space:pre-line}
+#saved{color:var(--muted);font-size:14px;font-weight:600;margin:6px 0 0}#notice.err{color:#c0392b}#notice.ok{color:#1e8a5a}
 .steps{list-style:none;padding:0;margin:12px 0 0}.steps li{padding:6px 0;font-weight:600}.steps li::before{content:"○ ";color:var(--muted)}.steps li.done::before{content:"✓ ";color:#1e8a5a}.steps li.fail::before{content:"✕ ";color:#c0392b}.steps li.run::before{content:"… ";color:var(--ocean)}
 .steps a{color:var(--ocean)}
 .settings{margin-top:14px;padding:14px 16px;border:1.5px dashed var(--fieldline);border-radius:12px}
@@ -148,7 +149,8 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 
 <div class="toolbar">
 <label>Also email a copy to (optional, comma separated). The person selected above is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
-<button type="button" class="primary" id="submit">Submit pre-inspection</button><button type="button" class="ghost" id="pdfOnly">Download PDF only</button><button type="button" class="ghost" id="reset">New pre-inspection</button>
+<button type="button" class="primary" id="submit">Submit pre-inspection</button><button type="button" class="ghost" id="saveProgress">Save progress</button><button type="button" class="ghost" id="pdfOnly">Download PDF only</button><button type="button" class="ghost" id="reset">New pre-inspection</button>
+<p id="saved" role="status"></p>
 <p id="notice" role="status" aria-live="polite"></p>
 <ul class="steps" id="steps" hidden></ul>
 </div>
@@ -298,10 +300,21 @@ $('propQ').addEventListener('keydown',e=>{const l=$('propRes');if(e.key==='Arrow
 $('propQ').addEventListener('focusout',()=>setTimeout(()=>$('propRes').hidden=true,150));
 
 // ---- Draft on this device ----
+// Kept in IndexedDB so photos fit (localStorage is only a few MB). Falls back to localStorage without photos.
 const DRAFT='ns-void-preinspection-draft';let saveT;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const d={...S,savedAt:new Date().toISOString()};store.set(DRAFT,d);if(!store.get(DRAFT))store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))})},500)}
+const Drafts=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('ns-void-preinspection',1);r.onupgradeneeded=()=>r.result.createObjectStore('drafts');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+ const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{const t=db.transaction('drafts',mode),q=fn(t.objectStore('drafts'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)}));
+ return{async get(){try{const d=await tx('readonly',s=>s.get('current'));if(d)return d}catch{}return store.get(DRAFT)},
+  async put(d){try{await tx('readwrite',s=>s.put(d,'current'));store.del(DRAFT);return'all'}catch{}store.set(DRAFT,d);if(store.get(DRAFT))return'all';store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))});return store.get(DRAFT)?'nophotos':''},
+  async del(){store.del(DRAFT);try{await tx('readwrite',s=>s.delete('current'))}catch{}}}})();
+const started=d=>d&&d.rooms&&(d.officer||d.address||d.rooms.some(r=>Object.keys(r.ticks||{}).length||r.extra?.length||r.photos?.length||r.notes?.trim()));
+let saveReady=false;
+async function saveNow(){clearTimeout(saveT);if(!saveReady||!started(S))return'';const d={...S,savedAt:new Date().toISOString()};const how=await Drafts.put(d);const at=new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});$('saved').textContent=how==='all'?`Progress saved on this device at ${at}.`:how==='nophotos'?`Progress saved on this device at ${at}, but without photos (this device is out of space).`:'Progress could not be saved on this device. Download PDF only keeps a copy.';return how}
+function save(){clearTimeout(saveT);saveT=setTimeout(saveNow,500)}
+window.addEventListener('pagehide',()=>saveNow());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
+$('saveProgress').onclick=async()=>{if(!started(S)){say('Choose the officer or find the property first, then save your progress.','err');return}$('restore').hidden=true;saveReady=true;if(await saveNow())say('Progress saved. You can close the page and carry on later on this device and browser.','ok')};
 function load(d){S={...blank(),...d};S.inv={...blankInv(),...(d.inv||{})};paintFields();renderRooms()}
-$('reset').onclick=()=>{if(!confirm('Start a new pre-inspection? Anything not submitted will be cleared.'))return;store.del(DRAFT);S=blank();paintFields();renderRooms();$('steps').hidden=true;say('');window.scrollTo({top:0,behavior:'smooth'})};
+$('reset').onclick=()=>{if(!confirm('Start a new pre-inspection? Anything not submitted will be cleared.'))return;clearTimeout(saveT);Drafts.del();$('saved').textContent='';S=blank();paintFields();renderRooms();$('steps').hidden=true;say('');window.scrollTo({top:0,behavior:'smooth'})};
 
 // ---- Validation ----
 function say(t,cls){const n=$('notice');n.textContent=t;n.className=cls||''}
@@ -389,7 +402,7 @@ async function doSubmit(){if(busy||!valid())return;busy=true;const btn=$('submit
   if(!res.ok){mark(1,'fail',esc(body.error||`The server refused the report (${res.status}).`));say('Not submitted. Your entries are still here.','err');return}
   mark(1,'done',`Saved and emailed. Reference <span class="ref">${esc(body.reference)}</span>`);
   mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
-  say(`Pre-inspection ${body.reference} submitted. The report is in SharePoint and in your inbox. Start the next one with "New pre-inspection".`,'ok');store.del(DRAFT)
+  say(`Pre-inspection ${body.reference} submitted. The report is in SharePoint and in your inbox. Start the next one with "New pre-inspection".`,'ok');clearTimeout(saveT);Drafts.del();$('saved').textContent=''
  }catch(e){say('Could not create the report: '+(e.message||e),'err')}
  finally{busy=false;btn.disabled=false}}
 function offerDownload(bytes,name,cb){try{const u=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);cb({state:'done',html:'PDF downloaded to this device'})}catch{cb({state:'fail',html:'PDF download not available here'})}}
@@ -412,7 +425,7 @@ const toDataUrl=blob=>new Promise((ok,no)=>{const f=new FileReader();f.onload=()
   LOGO=await toDataUrl(await lr.blob());
   {const im=new Image();im.src=LOGO;await im.decode().catch(()=>{});if(im.naturalWidth)LOGO_R=im.naturalHeight/im.naturalWidth}
  }catch(e){say('The form could not load its data ('+(e.message||e)+'). Reload the page.','err');return}
- paintFields();renderRooms();const d=store.get(DRAFT);if(d&&d.rooms&&(d.officer||d.address||d.rooms.some(r=>Object.keys(r.ticks||{}).length||r.extra?.length))){$('restoreWhat').textContent=`${(d.address||'No address').split(/\n|,/)[0]} · last changed ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true};$('restoreNo').onclick=()=>{store.del(DRAFT);$('restore').hidden=true}}
+ paintFields();renderRooms();const d=await Drafts.get();saveReady=true;if(started(d)){const n=d.rooms.reduce((k,r)=>k+(r.photos?.length||0),0);$('restoreWhat').textContent=`${(d.address||'No address').split(/\n|,/)[0]} · ${n} photo${n===1?'':'s'} · last saved ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true;say('')};$('restoreNo').onclick=()=>{if(!confirm('Discard the unsent pre-inspection saved on this device?'))return;clearTimeout(saveT);Drafts.del();$('restore').hidden=true;$('saved').textContent=''}}
 })();
 </script>
 </body></html>
