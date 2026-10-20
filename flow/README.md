@@ -2,7 +2,7 @@
 
 The Azure Function at `/api/submit` does all the checking, pricing and formatting, then POSTs one JSON body to this flow. The flow only copies fields into SharePoint and Outlook. Build it as a new **Instant cloud flow** named `Void Pre-Inspection submit`.
 
-Replace `<SITE>` below with the SharePoint site holding the lists, for example `https://northstarhg.sharepoint.com/sites/SupportedHousing`. Create the lists first (see `../sharepoint/list-schema.md`).
+The lists and library live on **North Star News**, like the Awaab's and Property Services registers. Wherever this guide says `<SITE>`, use `https://northstarhg.sharepoint.com/sites/NorthStarNews`. Create the lists first (see `../sharepoint/list-schema.md`).
 
 ## 1. When an HTTP request is received
 

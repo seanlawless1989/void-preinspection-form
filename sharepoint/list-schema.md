@@ -1,6 +1,6 @@
 # SharePoint lists and library
 
-Create these on the SharePoint site that will hold the records (for example the Supported Housing or Property Services site). Column names must match exactly, because the flow writes to their internal names. Create each column with the name shown first, and rename it afterwards if you want a friendlier label.
+Create these on **North Star News** (`https://northstarhg.sharepoint.com/sites/NorthStarNews`), alongside the Awaab's and Property Services registers. Give each one unique permissions (Owners only), then grant the Supported Housing staff; the flow owner needs Edit. Column names must match exactly, because the flow writes to their internal names. Create each column with the name shown first, and rename it afterwards if you want a friendlier label.
 
 ## Library: Void Pre-Inspection Records
 
