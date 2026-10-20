@@ -29,6 +29,31 @@ function principal(headers) {
   } catch { return null; }
 }
 
+// Keeps only the known inventory rooms and items, whatever the browser sent.
+function cleanInventory(v) {
+  const inv = { on: false, rooms: {}, access: '', clearance: '' };
+  if (!v || typeof v !== 'object' || v.on !== true) return inv;
+  inv.on = true;
+  inv.access = str(v.access, 1000).trim();
+  inv.clearance = str(v.clearance, 1000).trim();
+  const act = a => (VPI.INV_ACTS.includes(a) ? a : '');
+  for (const rm of VPI.INVENTORY) {
+    const s = v.rooms && v.rooms[rm.key];
+    if (!s || typeof s !== 'object') continue;
+    const out = { items: {}, lists: {} };
+    rm.items.forEach((_, i) => {
+      const r = s.items && s.items[i];
+      if (r && typeof r === 'object' && (act(r.act) || r.clean === true)) out.items[i] = { act: act(r.act), clean: r.clean === true };
+    });
+    for (const l of rm.lists) {
+      const arr = Array.isArray(s.lists && s.lists[l]) ? s.lists[l].slice(0, 30) : [];
+      out.lists[l] = arr.map(e => ({ text: str(e && e.text, 120).trim(), act: act(e && e.act), clean: !!e && e.clean === true })).filter(e => e.text);
+    }
+    inv.rooms[rm.key] = out;
+  }
+  return inv;
+}
+
 function clean(f) {
   if (!f || typeof f !== 'object') fail('The form is missing.');
   const o = {};
@@ -36,6 +61,7 @@ function clean(f) {
     o[k] = str(f[k]).trim();
   for (const [k] of VPI.YN) o[k] = str(f[k]);
   o.noWorks = f.noWorks === true;
+  o.inventory = cleanInventory(f.inventory);
   if (!Array.isArray(f.rooms) || f.rooms.length > 40) fail('The rooms are missing.');
   o.rooms = f.rooms.map(r => {
     if (!VPI.ITEMS[r?.type]) fail('A room has an unknown type.');
@@ -55,8 +81,8 @@ function clean(f) {
 }
 
 function validate(f) {
-  if (!VPI.officerName(f)) fail('Choose the supported officer.');
-  if (f.officer && f.officer !== 'Other' && !VPI.OFFICERS.some(o => o[0] === f.officer)) fail('Choose the supported officer from the list.');
+  if (!VPI.officerName(f)) fail('Choose who completed the form.');
+  if (f.officer && f.officer !== 'Other' && !VPI.OFFICERS.some(o => o[0] === f.officer)) fail('Choose the person who completed the form from the list.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) fail('Enter the date of inspection.');
   if (!f.address) fail('Enter the property address.');
   for (const [k, l] of VPI.YN) if (!['Yes', 'No'].includes(f[k])) fail(`Answer Yes or No for "${l}".`);
@@ -64,6 +90,11 @@ function validate(f) {
   if (!f.redec) fail('Choose the redecoration: full, part or other.');
   if (f.redec === 'Other' && !f.redecOther) fail('Describe the redecoration for "Other".');
   if (f.colour === 'Other' && !f.colourOther) fail('Give the colour for "Other".');
+  if (f.inventory.on) {
+    const bad = VPI.invRows(f.inventory).find(r => r.listed && !r.act && !r.clean);
+    if (bad) fail(`Inventory, ${bad.room}: choose Stay, Remove or Clean for "${bad.item}".`);
+    if (!VPI.invHasContent(f.inventory)) fail('The inventory is switched on but nothing is recorded. Add some items, or switch the inventory off.');
+  }
   if (f.noWorks) return;
   let any = false;
   for (const r of f.rooms) for (const l of VPI.lines(r, CAT)) {
@@ -79,16 +110,23 @@ function reference(f, submittedAt) {
   return `VPI-${submittedAt.slice(0, 10).replace(/-/g, '')}-${h}`;
 }
 
+function inventoryHtml(f) {
+  if (!f.inventory.on) return '<p style="color:#46566b;font-size:12px">No inventory was completed on this form.</p>';
+  const rows = VPI.invRows(f.inventory), rooms = [...new Set(rows.map(r => r.room))];
+  const block = rooms.map(rm => `<p style="margin:10px 0 2px"><b>${esc(rm)}</b></p><table>${rows.filter(r => r.room === rm).map(r => `<tr><td style="padding:2px 16px 2px 0">${esc(r.item)}</td><td style="padding:2px 0"><b>${esc(VPI.invActText(r) || 'no decision')}</b></td></tr>`).join('')}</table>`).join('');
+  return `<h3 style="color:#005291">Inventory</h3>${block || '<p>No items recorded.</p>'}${f.inventory.access ? `<p><b>Access instructions:</b> ${esc(f.inventory.access)}</p>` : ''}${f.inventory.clearance ? `<p><b>Clearance instructions:</b> ${esc(f.inventory.clearance)}</p>` : ''}`;
+}
+
 function emailHtml(f, ref, works, total, by) {
   const row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;vertical-align:top"><b>${esc(k)}</b></td><td style="padding:4px 0">${esc(v)}</td></tr>`;
   return `<div style="font-family:Arial,sans-serif;color:#06122b">
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
 <p>Reference <b>${esc(ref)}</b>, submitted by ${esc(by.name)}. The PDF report is attached and saved in the Void Pre-Inspection Records library.</p>
 ${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}, estimated ${money(total)} at NHF8 base rates.</p>`}
-<table>${row('Supported officer', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
+<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>
-<p style="color:#46566b;font-size:12px">The inventory (items to leave or remove) is recorded on a separate sheet.</p></div>`;
+${inventoryHtml(f)}</div>`;
 }
 
 // Returns { status, body }. postToFlow(json) must resolve to { ok, status, text }.
@@ -165,6 +203,8 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
       SubmissionId: f.id || ref,
     },
     worksItems: works,
+    hasInventory: f.inventory.on,
+    inventoryText: VPI.inventoryText(f),
     emailTo: user.email,
     emailCc: cc.join(';'),
     emailSubject: `Void pre-inspection${f.noWorks ? ' (NO WORKS – close void)' : ''} – ${addr} – ${VPI.ukDate(f.date)} – ${ref}`,

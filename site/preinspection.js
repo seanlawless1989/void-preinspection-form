@@ -35,7 +35,15 @@
     ['Sue Splevins', 'Susan.Splevins@northstarhg.co.uk'],
     ['Suzanne Collantine', 'Suzanne.Collantine@northstarhg.co.uk'],
     ['Zoe Holley', 'Zoe.Holley@northstarhg.co.uk'],
-  ];
+    // Property Services surveyors (same people as the Property Services inspection form).
+    ['Alex McGirr', 'Alexandra.McGirr@northstarhg.co.uk'],
+    ['Amy Rose', 'Amy.Rose@northstarhg.co.uk'],
+    ['Azhir Bashir', 'Azhir.Bashir@northstarhg.co.uk'],
+    ['Callum O\'Reilly', 'Callum.OReilly@northstarhg.co.uk'],
+    ['Deborah Olver', 'Deborah.Olver@northstarhg.co.uk'],
+    ['Fiona McCulloch', 'Fiona.McCulloch@northstarhg.co.uk'],
+    ['Jakub Napierala', 'Jakub.Napierala@northstarhg.co.uk'],
+  ].sort((a, b) => a[0].localeCompare(b[0], 'en'));
 
   const YN = [['gasCap', 'Gas cap'], ['epc', 'EPC required'], ['utilities', 'Utilities swap to North Star needed'], ['elec', 'Electric on'], ['pat', 'Supported white goods PAT']];
   const CHOICES = { redec: ['Full', 'Part', 'Other'], colour: ['White', 'Grey', 'Other'] };
@@ -48,6 +56,50 @@
     general: [{ c: '460003', t: 'Clear out any rubbish' }, { c: '460035', t: 'Skip for any large items to be removed' }, { c: '460012', t: 'Final clean including white goods inside and outside', q: 2 }, { c: '460010', t: 'Clearance of any needles / bodily fluids etc' }, { c: '896001', t: 'Electric check' }, { c: '872025', t: 'Check smoke detection' }, { c: '841105', t: 'Clean / service air vents' }, { c: '895503', t: 'PAT test 2–3 items' }, { c: '895505', t: 'PAT test 4–10 items' }],
   };
   const DEFAULT_ROOMS = [['Bed 1', 'living'], ['Bed 2', 'living'], ['Lounge', 'living'], ['Hall', 'living'], ['Kitchen', 'kitchen'], ['Bathroom', 'bathroom'], ['Other general repairs', 'general']];
+
+  // The optional property inventory (from the paper "Property Inventory" sheet): for each item the
+  // officer or surveyor says whether it stays or is removed, and whether it needs cleaning.
+  // `lists` are the "Other (list)" / "Furniture (list)" rows: free-text lines, each with the same choices.
+  const INVENTORY = [
+    { key: 'kitchen', name: 'Kitchen', items: ['Cooker', 'Washing machine', 'Fridge / freezer', 'Blinds', 'Microwave', 'Kettle', 'Toaster', 'Pots, pans and cutlery', 'Flooring'], lists: ['Other'] },
+    { key: 'lounge', name: 'Lounge', items: ['Flooring / carpet', 'Blinds', 'Curtains', 'Lampshade'], lists: ['Furniture', 'Other'] },
+    { key: 'bed1', name: 'Large bedroom', items: ['Blinds (x1)', 'Lampshade', 'Carpet / flooring'], lists: ['Other'] },
+    { key: 'bed2', name: 'Bed 2', items: ['Curtains', 'Blinds', 'Lampshade', 'Carpet / flooring'], lists: ['Other'] },
+    { key: 'bathroom', name: 'Bathroom', items: ['Blinds', 'Lampshade', 'Flooring'], lists: ['Other'] },
+  ];
+  const INV_ACTS = ['stay', 'remove'];
+  const invActText = r => [r.act ? r.act.toUpperCase() : '', r.clean ? 'CLEAN' : ''].filter(Boolean).join(' + ');
+
+  // Everything recorded on the inventory, one row per item (only items with a decision, plus any typed list lines).
+  function invRows(inv) {
+    const out = [];
+    if (!inv || !inv.on) return out;
+    for (const rm of INVENTORY) {
+      const st = (inv.rooms || {})[rm.key];
+      if (!st) continue;
+      rm.items.forEach((name, i) => {
+        const r = st.items && st.items[i];
+        if (r && (r.act || r.clean)) out.push({ room: rm.name, item: name, act: r.act || '', clean: !!r.clean });
+      });
+      for (const l of rm.lists) for (const e of (st.lists && st.lists[l]) || []) {
+        const text = String(e.text || '').trim();
+        if (text) out.push({ room: rm.name, item: `${l}: ${text}`, act: e.act || '', clean: !!e.clean, listed: true });
+      }
+    }
+    return out;
+  }
+  const invHasContent = inv => !!inv && inv.on === true && (invRows(inv).length > 0 || !!String(inv.access || '').trim() || !!String(inv.clearance || '').trim());
+
+  function inventoryText(f) {
+    if (!f.inventory || !f.inventory.on) return '';
+    const rows = invRows(f.inventory), rooms = [...new Set(rows.map(r => r.room))];
+    const out = [`Inventory – ${addr1(f.address) || 'address'} – ${ukDate(f.date)}`];
+    for (const rm of rooms) out.push('', rm, ...rows.filter(r => r.room === rm).map(r => `  ${r.item} – ${invActText(r) || 'no decision'}`));
+    if (!rooms.length) out.push('', 'No items recorded.');
+    if (f.inventory.access) out.push('', 'Access instructions: ' + f.inventory.access);
+    if (f.inventory.clearance) out.push('', 'Clearance instructions: ' + f.inventory.clearance);
+    return out.join('\n');
+  }
 
   // The NHF8 book (sors.json) indexed by row id and by code.
   function catalogue(raw) {
@@ -98,5 +150,5 @@
     return [head].concat(rs.length ? rs.map(r => '\n' + roomSorText(r, cat)) : ['\nNo repairs ticked yet.']).join('\n');
   }
 
-  return { OFFICERS, YN, CHOICES, ITEMS, DEFAULT_ROOMS, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText };
+  return { OFFICERS, YN, CHOICES, ITEMS, DEFAULT_ROOMS, INVENTORY, INV_ACTS, invActText, invRows, invHasContent, inventoryText, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText };
 });

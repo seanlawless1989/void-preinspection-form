@@ -72,6 +72,12 @@ td.n,th.n{text-align:right;white-space:nowrap}td small{color:var(--muted);displa
 .total{padding:12px 16px;margin-top:14px;background:var(--tint);border-left:5px solid #00a796;border-radius:10px;font-weight:700;color:var(--ocean)}
 .noworks{margin:14px 0;padding:12px 16px;border-radius:12px;border:1.5px solid var(--fieldline);font-weight:600}
 .noworks:has(input:checked){border-color:#c29500;background:#fff8db;color:#705400}
+.optin{display:block;margin:14px 0;padding:12px 16px;border-radius:12px;border:1.5px solid var(--fieldline);font-weight:600;cursor:pointer}
+.optin:has(input:checked){border-color:var(--combat);background:var(--tint);color:var(--ocean)}
+.inv td.c,.inv th.c{width:74px;text-align:center}.inv td.c input{margin:0}.inv td label{margin:0;font-weight:600}
+.invlist{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}.invlist>b{display:block;font-weight:600}
+.invline{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:8px 0}.invline input[type=text]{flex:1 1 220px;margin:0}
+.invline .tick{padding:7px 14px}
 .copybox{margin-top:16px;padding:18px;border-radius:14px;background:#005291;color:#fff}
 .copybox h3{color:#fff}.copybox .hint{color:#d7e7f3}
 .copybox textarea{background:#fff;color:#06122b;border:0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;min-height:180px}
@@ -93,16 +99,16 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </style>
 </head><body>
 <header class="topbar"><div class="topbar-inner"><img src="northstar-logo.png" alt="North Star"><span class="eyebrow">Supported Housing</span><span class="who" id="who"></span></div></header>
-<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you and the officer. The inventory (items to leave or remove) is recorded on a separate sheet.</p></div></div>
+<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you and the officer. You can also complete the optional inventory at the end, to record which items stay, which are removed and which need cleaning.</p></div></div>
 
 <main><div class="card">
 <div id="restore" class="settings" hidden><b>Unsent pre-inspection found on this device.</b> <span id="restoreWhat"></span><br><button type="button" class="small" id="restoreYes">Carry on with it</button><button type="button" class="small ghost" id="restoreNo">Start a new one</button></div>
 
 <section><h2><span class="num">01</span>Property details</h2>
 <div class="grid">
-<label>Supported officer<select id="officer"></select></label>
+<label>Completed by (officer or surveyor)<select id="officer"></select></label>
 <label>Date of inspection<input id="date" type="date"></label>
-<label id="officerOtherWrap" hidden class="full">Officer name<input id="officerOther" type="text" autocomplete="name"></label>
+<label id="officerOtherWrap" hidden class="full">Name<input id="officerOther" type="text" autocomplete="name"></label>
 <div class="combo full"><label>Find the property<input id="propQ" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing the address, postcode or property reference" role="combobox" aria-expanded="false" aria-controls="propRes"></label><ul class="results" id="propRes" hidden role="listbox"></ul></div>
 <p class="hint full" id="stockLine" hidden></p>
 <label class="full">Property address<textarea id="address" rows="2" placeholder="Filled in when you pick the property above, or type it if it isn't listed"></textarea></label>
@@ -132,8 +138,16 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 <div class="copybox"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h3>SOR codes by room</h3><button type="button" class="small" id="copyAll">Copy all</button></div><p class="hint">Ready to paste into HMS. Each room has its own Copy button too.</p><textarea id="sorText" readonly aria-label="All SOR codes by room"></textarea></div>
 </section>
 
+<section><h2><span class="num">03</span>Inventory <span class="hint" style="font-weight:400">(optional)</span></h2>
+<p class="hint">Record which items stay in the property, which are removed and which need cleaning. The address, date and who completed it come from section 01.</p>
+<label class="optin"><input type="checkbox" id="invOn">Complete an inventory for this property</label>
+<div id="invBody" hidden>
+<div id="invRooms"></div>
+<div class="grid"><label>Access instructions<textarea id="invAccess" rows="2"></textarea></label><label>Clearance instructions<textarea id="invClear" rows="2"></textarea></label></div>
+</div></section>
+
 <div class="toolbar">
-<label>Also email a copy to (optional, comma separated). The supported officer is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
+<label>Also email a copy to (optional, comma separated). The person selected above is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
 <button type="button" class="primary" id="submit">Submit pre-inspection</button><button type="button" class="ghost" id="pdfOnly">Download PDF only</button><button type="button" class="ghost" id="reset">New pre-inspection</button>
 <p id="notice" role="status" aria-live="polite"></p>
 <ul class="steps" id="steps" hidden></ul>
@@ -141,7 +155,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </div>
 
 </main>
-<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" form. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines). Values are estimates at NHF8 base rates.</footer>
+<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" and "Property Inventory" forms. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines). Values are estimates at NHF8 base rates.</footer>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="preinspection.js"></script>
@@ -156,7 +170,7 @@ const today=()=>new Date().toLocaleDateString('en-CA');
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
 const MAX_PHOTOS=12;
-const {OFFICERS,YN,CHOICES,ITEMS,DEFAULT_ROOMS}=VPI;
+const {OFFICERS,YN,CHOICES,ITEMS,DEFAULT_ROOMS,INVENTORY}=VPI;
 const officerName=()=>VPI.officerName(S);
 const officerEmail=()=>VPI.officerEmail(S);
 
@@ -174,13 +188,14 @@ function findSors(q){const t=norm(q).split(' ').filter(Boolean).map(w=>SYN[w]||w
 const unitOf=VPI.unitOf,lineValue=VPI.lineValue,qtyText=VPI.qtyText;
 // ---- State ----
 let S=blank(),busy=false;
-function blank(){return{id:uid(),officer:'',officerOther:'',propRef:'',date:today(),address:'',propType:'',duration:'',keysafe:'',access:'',gasCap:'',epc:'',utilities:'',elec:'',pat:'',hs:'',redec:'',redecOther:'',colour:'',colourOther:'',notes:'',external:'',noWorks:false,rooms:DEFAULT_ROOMS.map(([n,t])=>newRoom(n,t)),cc:''}}
+function blank(){return{id:uid(),officer:'',officerOther:'',propRef:'',date:today(),address:'',propType:'',duration:'',keysafe:'',access:'',gasCap:'',epc:'',utilities:'',elec:'',pat:'',hs:'',redec:'',redecOther:'',colour:'',colourOther:'',notes:'',external:'',noWorks:false,inv:blankInv(),rooms:DEFAULT_ROOMS.map(([n,t])=>newRoom(n,t)),cc:''}}
+function blankInv(){return{on:false,rooms:{},access:'',clearance:''}}
 function newRoom(name,type){return{id:uid(),name,type,ticks:{},extra:[],notes:'',photos:[]}}
 const FIELDS=['officer','officerOther','date','address','propRef','propType','duration','keysafe','access','hs','redecOther','colourOther','notes','external','cc'];
 const addr1=()=>VPI.addr1(S.address);
 const lines=r=>VPI.lines(r,CAT);
 
-function paintFields(){$('officer').innerHTML=`<option value="">Select officer…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;
+function paintFields(){$('officer').innerHTML=`<option value="">Select name…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;paintInv();
  $('yn').innerHTML=YN.map(([k,l])=>`<div class="q"><b>${esc(l)}</b><div class="ticks" data-radio="${k}"></div></div>`).join('');
  document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${v}</label>`).join('')});toggles()}
 function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:''}
@@ -204,6 +219,37 @@ function totals(){const all=S.rooms.flatMap(lines),v=all.reduce((a,l)=>a+lineVal
  document.querySelectorAll('.room').forEach(d=>{const r=S.rooms.find(x=>x.id===d.dataset.id);if(!r)return;const n=lines(r).length,c=d.querySelector('.count');c.textContent=n?`${n} repair${n===1?'':'s'}`:'No repairs ticked';c.classList.toggle('has',!!n)})}
 function roomSorText(r){return VPI.roomSorText(r,CAT)}
 function sorText(){return VPI.sorText(S,CAT)}
+
+// ---- Inventory (optional) ----
+const invSt=k=>S.inv.rooms[k]||(S.inv.rooms[k]={items:{},lists:{}});
+const invCount=k=>{const st=S.inv.rooms[k];if(!st)return 0;const rm=INVENTORY.find(x=>x.key===k);return Object.values(st.items).filter(r=>r.act||r.clean).length+rm.lists.reduce((n,l)=>n+((st.lists[l]||[]).filter(e=>e.text.trim()).length),0)};
+const lineHtml=(e,j)=>`<div class="invline" data-j="${j}"><input type="text" data-it value="${esc(e.text)}" placeholder="Item" aria-label="Item" maxlength="120"><label class="tick"><input type="checkbox" data-la="stay" ${e.act==='stay'?'checked':''}>Stay</label><label class="tick"><input type="checkbox" data-la="remove" ${e.act==='remove'?'checked':''}>Remove</label><label class="tick"><input type="checkbox" data-lc ${e.clean?'checked':''}>Clean</label><button type="button" class="remove" data-act="removeLine" aria-label="Remove this line">✕</button></div>`;
+function invRoomHtml(rm){const st=invSt(rm.key),n=invCount(rm.key);
+ return `<details class="room" data-key="${rm.key}"><summary><span class="name">${esc(rm.name)}</span><span class="count${n?' has':''}">${n?`${n} item${n===1?'':'s'} recorded`:'Nothing recorded'}</span></summary><div class="room-body"><div class="table-wrap"><table class="inv"><thead><tr><th>Item</th><th class="c">Stay</th><th class="c">Remove</th><th class="c">Clean</th></tr></thead><tbody>
+${rm.items.map((name,i)=>{const r=st.items[i]||{};const id=`inv-${rm.key}-${i}`;return `<tr data-i="${i}"><td><label for="${id}-s">${esc(name)}</label></td><td class="c"><input type="checkbox" id="${id}-s" data-ia="stay" aria-label="Stay: ${esc(name)}" ${r.act==='stay'?'checked':''}></td><td class="c"><input type="checkbox" data-ia="remove" aria-label="Remove: ${esc(name)}" ${r.act==='remove'?'checked':''}></td><td class="c"><input type="checkbox" data-ia="clean" aria-label="Clean: ${esc(name)}" ${r.clean?'checked':''}></td></tr>`}).join('')}
+</tbody></table></div>
+${rm.lists.map(l=>`<div class="invlist" data-list="${esc(l)}"><b>${l==='Furniture'?'Furniture (list each item)':'Other items (list each one)'}</b><div class="invlines">${(st.lists[l]||[]).map(lineHtml).join('')}</div><button type="button" class="ghost small" data-act="addLine">+ Add item</button></div>`).join('')}
+<div class="room-tools"><button type="button" class="ghost small" data-act="allStay">Mark all stay</button><button type="button" class="remove" data-act="clearRoom">Clear room</button></div>
+</div></details>`}
+function paintInv(){$('invOn').checked=!!S.inv.on;$('invBody').hidden=!S.inv.on;const open=new Set([...document.querySelectorAll('#invRooms .room[open]')].map(d=>d.dataset.key));$('invRooms').innerHTML=INVENTORY.map(invRoomHtml).join('');document.querySelectorAll('#invRooms .room').forEach(d=>{d.open=open.has(d.dataset.key)});$('invAccess').value=S.inv.access||'';$('invClear').value=S.inv.clearance||''}
+function invRefresh(d){const n=invCount(d.dataset.key),c=d.querySelector('.count');c.textContent=n?`${n} item${n===1?'':'s'} recorded`:'Nothing recorded';c.classList.toggle('has',!!n)}
+$('invOn').addEventListener('change',e=>{S.inv.on=e.target.checked;$('invBody').hidden=!S.inv.on;if(S.inv.on&&!document.querySelector('#invRooms .room[open]'))document.querySelector('#invRooms .room')?.setAttribute('open','');save()});
+$('invAccess').addEventListener('input',e=>{S.inv.access=e.target.value;save()});
+$('invClear').addEventListener('input',e=>{S.inv.clearance=e.target.value;save()});
+$('invRooms').addEventListener('change',e=>{const t=e.target,d=t.closest('.room');if(!d)return;const st=invSt(d.dataset.key);
+ if(t.dataset.ia){const row=t.closest('tr'),i=+row.dataset.i,r=st.items[i]||(st.items[i]={act:'',clean:false});
+  if(t.dataset.ia==='clean')r.clean=t.checked;else{r.act=t.checked?t.dataset.ia:'';row.querySelectorAll('[data-ia="stay"],[data-ia="remove"]').forEach(c=>{c.checked=c.dataset.ia===r.act})}}
+ else if(t.dataset.la||t.hasAttribute('data-lc')){const line=t.closest('.invline'),list=t.closest('.invlist').dataset.list,e2=st.lists[list][+line.dataset.j];
+  if(t.hasAttribute('data-lc'))e2.clean=t.checked;else{e2.act=t.checked?t.dataset.la:'';line.querySelectorAll('[data-la]').forEach(c=>{c.checked=c.dataset.la===e2.act})}}
+ else return;invRefresh(d);save()});
+$('invRooms').addEventListener('input',e=>{const t=e.target;if(!t.hasAttribute('data-it'))return;const d=t.closest('.room'),st=invSt(d.dataset.key),line=t.closest('.invline');st.lists[t.closest('.invlist').dataset.list][+line.dataset.j].text=t.value;invRefresh(d);save()});
+$('invRooms').addEventListener('click',e=>{const b=e.target.closest('button[data-act]');if(!b)return;const d=b.closest('.room'),k=d.dataset.key,rm=INVENTORY.find(x=>x.key===k),st=invSt(k);
+ switch(b.dataset.act){
+ case'addLine':{const l=b.closest('.invlist').dataset.list;(st.lists[l]||(st.lists[l]=[])).push({text:'',act:'',clean:false});d.open=true;paintInv();document.querySelector(`#invRooms [data-key="${k}"]`).open=true;const lines=document.querySelectorAll(`#invRooms [data-key="${k}"] [data-list="${CSS.escape(l)}"] [data-it]`);lines[lines.length-1]?.focus();break}
+ case'removeLine':{const l=b.closest('.invlist').dataset.list;st.lists[l].splice(+b.closest('.invline').dataset.j,1);paintInv();document.querySelector(`#invRooms [data-key="${k}"]`).open=true;break}
+ case'allStay':rm.items.forEach((_,i)=>{const r=st.items[i]||(st.items[i]={act:'',clean:false});r.act='stay'});paintInv();document.querySelector(`#invRooms [data-key="${k}"]`).open=true;break;
+ case'clearRoom':if(invCount(k)&&!confirm(`Clear everything recorded for ${rm.name}?`))return;S.inv.rooms[k]={items:{},lists:{}};paintInv();document.querySelector(`#invRooms [data-key="${k}"]`).open=true;break}
+ save()});
 
 // ---- Events ----
 document.addEventListener('input',e=>{const t=e.target;if(FIELDS.includes(t.id)){S[t.id]=t.value;if(t.id==='address'||t.id==='date')totals();save()}});
@@ -254,18 +300,21 @@ $('propQ').addEventListener('focusout',()=>setTimeout(()=>$('propRes').hidden=tr
 // ---- Draft on this device ----
 const DRAFT='ns-void-preinspection-draft';let saveT;
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const d={...S,savedAt:new Date().toISOString()};store.set(DRAFT,d);if(!store.get(DRAFT))store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))})},500)}
-function load(d){S={...blank(),...d};paintFields();renderRooms()}
+function load(d){S={...blank(),...d};S.inv={...blankInv(),...(d.inv||{})};paintFields();renderRooms()}
 $('reset').onclick=()=>{if(!confirm('Start a new pre-inspection? Anything not submitted will be cleared.'))return;store.del(DRAFT);S=blank();paintFields();renderRooms();$('steps').hidden=true;say('');window.scrollTo({top:0,behavior:'smooth'})};
 
 // ---- Validation ----
 function say(t,cls){const n=$('notice');n.textContent=t;n.className=cls||''}
 function valid(){
- if(!officerName()){say('Choose the supported officer.','err');$(S.officer==='Other'?'officerOther':'officer').focus();return false}
+ if(!officerName()){say('Choose who completed the form.','err');$(S.officer==='Other'?'officerOther':'officer').focus();return false}
  const need=[['date','Enter the date of inspection.'],['address','Enter the property address.']];for(const [k,m] of need)if(!String(S[k]).trim()){say(m,'err');$(k).focus();return false}
  const yn=YN.find(([k])=>!S[k]);if(yn){say(`Answer Yes or No for "${yn[1]}".`,'err');document.querySelector(`[data-radio="${yn[0]}"]`).scrollIntoView({block:'center'});return false}
  if(!S.redec){say('Choose the redecoration: full, part or other.','err');document.querySelector('[data-radio="redec"]').scrollIntoView({block:'center'});return false}
  if(S.redec==='Other'&&!S.redecOther.trim()){say('Describe the redecoration for "Other".','err');$('redecOther').focus();return false}
  if(S.colour==='Other'&&!S.colourOther.trim()){say('Give the colour for "Other".','err');$('colourOther').focus();return false}
+ if(S.inv.on){const rows=VPI.invRows(S.inv),bad=rows.find(r=>r.listed&&!r.act&&!r.clean);
+  if(bad){say(`Inventory, ${bad.room}: choose Stay, Remove or Clean for "${bad.item.replace(/^[^:]+: /,'')}".`,'err');$('invBody').scrollIntoView({block:'center'});return false}
+  if(!VPI.invHasContent(S.inv)){say('The inventory is switched on but nothing is recorded. Add some items, or untick "Complete an inventory".','err');$('invOn').scrollIntoView({block:'center'});return false}}
  if(S.noWorks)return true;
  for(const r of S.rooms)for(const l of lines(r))if(!(Number(l.qty)>0)){say(`${r.name}: enter the ${l.sqm?'area in m²':'quantity'} for "${l.label}".`,'err');const d=$('rooms').querySelector(`[data-id="${r.id}"]`);d.open=true;d.scrollIntoView({block:'center'});return false}
  if(!S.rooms.some(r=>lines(r).length)){say('Tick at least one repair, or tick "No repairs needed" if this void needs no works.','err');$('noWorks').scrollIntoView({block:'center'});return false}
@@ -291,7 +340,7 @@ function buildPdf(q){
  const H=t=>{if(y>262){doc.addPage();y=18}doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,ML,y);doc.setDrawColor(...COMBAT);doc.setLineWidth(.8);doc.line(ML,y+1.8,ML+18,y+1.8);y+=5};
  const K={fontStyle:'bold',cellWidth:44,textColor:OCEAN};
  H('Property details');
- T({startY:y,theme:'grid',body:[['Supported officer',officerName(),'Date',ukDate(S.date)],['Address',{content:S.address.replace(/\s*\n\s*/g,', '),colSpan:3}],['Property reference',S.propRef||'—','Stock record',stockText(S.propRef)||'—'],['Property type',S.propType||'—','Void duration',S.duration||'—'],['Keysafe number',S.keysafe||'—','Access',S.access||'—'],...[[0,1],[2,3]].map(([a,b])=>[YN[a][1],S[YN[a][0]],YN[b][1],S[YN[b][0]]]),[YN[4][1],S[YN[4][0]],'',''],['Redecoration',choice('redec','redecOther'),'Colour',choice('colour','colourOther')],['H&S issues',{content:S.hs||'None recorded',colSpan:3}],['Notes / appointments',{content:S.notes||'—',colSpan:3}],['External works',{content:S.external||'—',colSpan:3}]],columnStyles:{0:K,2:{fontStyle:'bold',cellWidth:40,textColor:OCEAN}}});
+ T({startY:y,theme:'grid',body:[['Completed by',officerName(),'Date',ukDate(S.date)],['Address',{content:S.address.replace(/\s*\n\s*/g,', '),colSpan:3}],['Property reference',S.propRef||'—','Stock record',stockText(S.propRef)||'—'],['Property type',S.propType||'—','Void duration',S.duration||'—'],['Keysafe number',S.keysafe||'—','Access',S.access||'—'],...[[0,1],[2,3]].map(([a,b])=>[YN[a][1],S[YN[a][0]],YN[b][1],S[YN[b][0]]]),[YN[4][1],S[YN[4][0]],'',''],['Redecoration',choice('redec','redecOther'),'Colour',choice('colour','colourOther')],['H&S issues',{content:S.hs||'None recorded',colSpan:3}],['Notes / appointments',{content:S.notes||'—',colSpan:3}],['External works',{content:S.external||'—',colSpan:3}]],columnStyles:{0:K,2:{fontStyle:'bold',cellWidth:40,textColor:OCEAN}}});
  H('Repairs by room');
  if(S.noWorks){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.text('No repairs needed. The officer has marked this void as needing no works so it can be closed off.',ML,y+3);y+=10}
  for(const r of S.rooms){const L=lines(r);if(!L.length&&!r.notes.trim()&&!r.photos.length)continue;if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(r.name,ML,y+1);y+=3;
@@ -303,7 +352,14 @@ function buildPdf(q){
  const empty=S.rooms.filter(r=>!lines(r).length).map(r=>r.name);
  if(!S.noWorks&&empty.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);const ls=doc.splitTextToSize('No repairs ticked in: '+empty.join(', ')+'.',CW);if(y+ls.length*4>280){doc.addPage();y=18}doc.text(ls,ML,y);y+=ls.length*4+4}
  if(!S.noWorks){doc.setFillColor(233,248,245);if(y>270){doc.addPage();y=18}doc.roundedRect(ML,y,CW,10,2,2,'F');doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(`Estimated value of repairs: ${money(grand)} at NHF8 base rates`,ML+4,y+6.5);y+=16}
- doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(...MUTED);if(y>282){doc.addPage();y=18}doc.text('The inventory (items to leave or remove) is recorded on a separate sheet.',ML,y);
+ if(S.inv.on){const rows=VPI.invRows(S.inv),rooms=[...new Set(rows.map(r=>r.room))];
+  if(y>240){doc.addPage();y=18}H('Inventory');
+  for(const rm of rooms){if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(rm,ML,y+1);y+=3;
+   T({startY:y,head:[['Item','Stay / remove','Clean']],body:rows.filter(r=>r.room===rm).map(r=>[r.item,r.act==='remove'?{content:'Remove',styles:{fontStyle:'bold',textColor:[192,57,43]}}:r.act==='stay'?'Stay':'—',r.clean?{content:'Clean',styles:{fontStyle:'bold'}}:'']),columnStyles:{1:{cellWidth:34},2:{cellWidth:24}}})}
+  if(!rooms.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);doc.text('No items recorded.',ML,y+3);y+=9}
+  if(y>255){doc.addPage();y=18}
+  T({startY:y,theme:'grid',body:[['Access instructions',S.inv.access||'—'],['Clearance instructions',S.inv.clearance||'—'],['Completed by',`${officerName()} on ${ukDate(S.date)}`]],columnStyles:{0:K}})}
+ else{doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(...MUTED);if(y>282){doc.addPage();y=18}doc.text('No inventory was completed on this form.',ML,y)}
  footer();return doc}
 const RC=new Map();const recompress=(src,q)=>RC.get(src+':'+q)||src;
 async function prepare(q){for(const p of S.rooms.flatMap(r=>r.photos)){const k=p+':'+q;if(q>=1||RC.has(k))continue;const im=new Image();im.src=p;await im.decode().catch(()=>{});const s=q<.5?.7:1,c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*s));c.height=Math.max(1,Math.round(im.naturalHeight*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);RC.set(k,c.toDataURL('image/jpeg',q))}}
@@ -318,7 +374,7 @@ async function whoAmI(){try{const r=await fetch('/.auth/me',{cache:'no-store'});
 function stepUi(names){const ul=$('steps');ul.hidden=false;ul.innerHTML=names.map((n,i)=>`<li id="st${i}">${n}</li>`).join('');return(i,state,html)=>{const li=$('st'+i);li.className=state;if(html)li.innerHTML=html}}
 // The PDF travels to the server as base64; keep it well under the request limits.
 const PDF_LIMIT=6e6;
-function payload(){return{...S,officerName:officerName(),stockRecord:S.propRef?stockText(S.propRef):'',rooms:S.rooms.map(r=>({id:r.id,name:r.name,type:r.type,ticks:r.ticks,extra:r.extra,notes:r.notes,photoCount:r.photos.length}))}}
+function payload(){return{...S,officerName:officerName(),stockRecord:S.propRef?stockText(S.propRef):'',rooms:S.rooms.map(r=>({id:r.id,name:r.name,type:r.type,ticks:r.ticks,extra:r.extra,notes:r.notes,photoCount:r.photos.length})),inventory:S.inv}}
 async function doSubmit(){if(busy||!valid())return;busy=true;const btn=$('submit');btn.disabled=true;say('');
  const mark=stepUi(['Create the PDF report','Save it to SharePoint and email it','Download a copy to this device']);
  try{

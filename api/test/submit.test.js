@@ -54,7 +54,7 @@ test('no-works voids send no works rows and flag the subject', async () => {
 
 test('validation messages', async () => {
   const bad = async (over, re) => { const r = await run({ form: form(over), pdfBase64: PDF }); assert.equal(r.status, 400); assert.match(r.body.error, re); };
-  await bad({ officer: '' }, /supported officer/);
+  await bad({ officer: '' }, /who completed/);
   await bad({ officer: 'Someone Else' }, /from the list/);
   await bad({ epc: '' }, /EPC required/);
   await bad({ redec: '' }, /redecoration/);
@@ -68,4 +68,50 @@ test('validation messages', async () => {
 test('a flow failure is reported, not hidden', async () => {
   const r = await handleSubmit({ headers: who(), body: { form: form(), pdfBase64: PDF } }, { postToFlow: async () => ({ ok: false, status: 500 }) });
   assert.equal(r.status, 502);
+});
+
+test('property surveyors can be chosen as the person completing the form', async () => {
+  const VPI = require('../../shared/preinspection');
+  for (const n of ['Jakub Napierala', 'Amy Rose', 'Azhir Bashir', 'Deborah Olver', "Callum O'Reilly", 'Fiona McCulloch', 'Alex McGirr'])
+    assert.ok(VPI.OFFICERS.some(o => o[0] === n && /@northstarhg\.co\.uk$/.test(o[1])), n);
+  const r = await run({ form: form({ officer: 'Amy Rose', cc: '' }), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.emailCc, 'Amy.Rose@northstarhg.co.uk');
+  assert.equal(r.sent.sharepointItem.Officer, 'Amy Rose');
+});
+
+test('inventory is optional and left out when not switched on', async () => {
+  const r = await run({ form: form(), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.hasInventory, false);
+  assert.equal(r.sent.inventoryText, '');
+  assert.match(r.sent.emailHtml, /No inventory was completed/);
+  assert.ok(!('Inventory' in r.sent.sharepointItem), 'list rows are unchanged so the existing SharePoint list keeps working');
+});
+
+test('inventory is cleaned, summarised and added to the email', async () => {
+  const inventory = { on: true, access: 'Keysafe 1234', clearance: 'Skip needed',
+    rooms: {
+      kitchen: { items: { 0: { act: 'remove', clean: true }, 1: { act: 'stay', clean: false }, 2: { act: 'bogus', clean: false }, 99: { act: 'stay' } }, lists: { Other: [{ text: 'Ironing board', act: 'remove', clean: false }, { text: '  ', act: 'stay' }] } },
+      nope: { items: { 0: { act: 'stay' } } },
+    } };
+  const r = await run({ form: form({ inventory }), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.hasInventory, true);
+  assert.match(r.sent.inventoryText, /Cooker – REMOVE \+ CLEAN/);
+  assert.match(r.sent.inventoryText, /Washing machine – STAY\n/);
+  assert.match(r.sent.inventoryText, /Other: Ironing board – REMOVE/);
+  assert.ok(!/bogus|nope|99/i.test(r.sent.inventoryText));
+  assert.match(r.sent.inventoryText, /Access instructions: Keysafe 1234/);
+  assert.match(r.sent.emailHtml, /Inventory/);
+  assert.match(r.sent.emailHtml, /Skip needed/);
+});
+
+test('inventory works on a no-works void and is validated when switched on', async () => {
+  const ok = await run({ form: form({ noWorks: true, inventory: { on: true, rooms: { lounge: { items: { 0: { act: 'stay' } }, lists: {} } } } }), pdfBase64: PDF });
+  assert.equal(ok.status, 200); assert.equal(ok.sent.worksItems.length, 0); assert.match(ok.sent.inventoryText, /Flooring \/ carpet – STAY/);
+  const empty = await run({ form: form({ inventory: { on: true, rooms: {} } }), pdfBase64: PDF });
+  assert.equal(empty.status, 400); assert.match(empty.body.error, /nothing is recorded/);
+  const undecided = await run({ form: form({ inventory: { on: true, rooms: { lounge: { items: {}, lists: { Furniture: [{ text: 'Sofa' }] } } } } }), pdfBase64: PDF });
+  assert.equal(undecided.status, 400); assert.match(undecided.body.error, /Stay, Remove or Clean/);
 });

@@ -26,7 +26,7 @@ Property search uses `site/properties.json` (Active Properties export, 7 Oct 202
 
 ## Changing the form
 
-* Supported officers, Yes/No questions, the tick list for each kind of room, default rooms: `shared/preinspection.js`. Run `npm run sync` afterwards.
+* Who can complete the form (supported officers and the Property Services surveyors), the inventory rooms and items, Yes/No questions, the tick list for each kind of room, default rooms: `shared/preinspection.js`. Run `npm run sync` afterwards.
 * Wording and layout: `site/index.html`.
 * Property list: replace `site/properties.json` and `site/property-details.json` with newer exports in the same shape.
 
@@ -62,4 +62,4 @@ npm run dev     # http://localhost:4280, signed in as a fake user; submissions g
 
 ## Not included yet
 
-The separate paper inventory sheet (items to leave or remove) is still on paper; the report says so.
+Nothing outstanding from the paper forms. The optional **Inventory** section (from the paper "Property Inventory" sheet) is on the form: staff tick Stay / Remove / Clean per item, add free-text furniture and other items, and give access and clearance instructions. It appears in the PDF and the email, and the payload carries `hasInventory` and `inventoryText` for the flow. The SharePoint list is unchanged; to keep the inventory as list data, add a multi-line column (for example `InventoryText`) and add it to `sharepointItem` in `api/src/lib/handleSubmit.js`.
