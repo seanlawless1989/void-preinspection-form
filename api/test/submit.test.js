@@ -146,3 +146,10 @@ test('Sean is copied in while the form beds in, then not', async () => {
   assert.equal((await send('2026-10-21T13:00:00Z')).emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk;sean.lawless@northstarhg.co.uk');
   assert.equal((await send('2026-12-01T09:00:00Z')).emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk');
 });
+
+test('redecoration can be No (no redecoration needed)', async () => {
+  const r = await run({ form: form({ redec: 'No', colour: '' }), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.sharepointItem.Redecoration, 'No');
+  assert.match(r.sent.emailHtml, /<b>Redecoration<\/b><\/td><td[^>]*>No</);
+});

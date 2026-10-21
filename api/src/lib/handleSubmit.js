@@ -100,7 +100,7 @@ function validate(f) {
   if (!f.address) fail('Enter the property address.');
   for (const [k, l] of VPI.YN) if (!['Yes', 'No'].includes(f[k])) fail(`Answer Yes or No for "${l}".`);
   for (const [k, vals] of Object.entries(VPI.CHOICES)) if (f[k] && !vals.includes(f[k])) fail(`Choose a valid ${k === 'redec' ? 'redecoration' : 'colour'}.`);
-  if (!f.redec) fail('Choose the redecoration: full, part or other.');
+  if (!f.redec) fail('Choose the redecoration: full, part, no or other.');
   if (f.redec === 'Other' && !f.redecOther) fail('Describe the redecoration for "Other".');
   if (f.colour === 'Other' && !f.colourOther) fail('Give the colour for "Other".');
   if (f.inventory.on) {

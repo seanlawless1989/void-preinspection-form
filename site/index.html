@@ -323,7 +323,7 @@ function valid(){
  if(!officerName()){say('Choose who completed the form.','err');$(S.officer==='Other'?'officerOther':'officer').focus();return false}
  const need=[['date','Enter the date of inspection.'],['address','Enter the property address.']];for(const [k,m] of need)if(!String(S[k]).trim()){say(m,'err');$(k).focus();return false}
  const yn=YN.find(([k])=>!S[k]);if(yn){say(`Answer Yes or No for "${yn[1]}".`,'err');document.querySelector(`[data-radio="${yn[0]}"]`).scrollIntoView({block:'center'});return false}
- if(!S.redec){say('Choose the redecoration: full, part or other.','err');document.querySelector('[data-radio="redec"]').scrollIntoView({block:'center'});return false}
+ if(!S.redec){say('Choose the redecoration: full, part, no or other.','err');document.querySelector('[data-radio="redec"]').scrollIntoView({block:'center'});return false}
  if(S.redec==='Other'&&!S.redecOther.trim()){say('Describe the redecoration for "Other".','err');$('redecOther').focus();return false}
  if(S.colour==='Other'&&!S.colourOther.trim()){say('Give the colour for "Other".','err');$('colourOther').focus();return false}
  if(S.inv.on){const rows=VPI.invRows(S.inv),bad=rows.find(r=>r.listed&&!r.act&&!r.clean);

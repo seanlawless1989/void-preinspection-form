@@ -46,7 +46,7 @@
   ].sort((a, b) => a[0].localeCompare(b[0], 'en'));
 
   const YN = [['gasCap', 'Gas cap'], ['epc', 'EPC required'], ['utilities', 'Utilities swap to North Star needed'], ['elec', 'Electric on'], ['pat', 'Supported white goods PAT']];
-  const CHOICES = { redec: ['Full', 'Part', 'Other'], colour: ['White', 'Grey', 'Other'] };
+  const CHOICES = { redec: ['Full', 'Part', 'No', 'Other'], colour: ['White', 'Grey', 'Other'] };
 
   // sqm: the paper asks for square metres; q: default quantity.
   const ITEMS = {
