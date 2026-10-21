@@ -179,7 +179,7 @@ const officerEmail=()=>VPI.officerEmail(S);
 
 // ---- Property list (same list as the Awaab's Law and Property Services forms) ----
 const NOT_HOMES=new Set(['Scheme','Estate','Garage','Garage Block','Office','Playground','Block']);
-let PROPS=[],DETAILS={},SURVEYORS={properties:{},emails:{}};
+let PROPS=[],DETAILS={},SURVEYORS={properties:{},emails:{},fallback:null};
 function findProps(q){const t=q.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);if(!t.length)return[];const out=[];for(const p of PROPS){if(t.every(w=>p.k.includes(w))){out.push(p);if(out.length>=30)break}}return out}
 function stockText(ref){const d=DETAILS[ref];if(!d)return'';const [bed,floor,heat,yr,area]=d;const fl=floor==null?'':floor===0?'ground floor':`floor ${floor}`;return [bed!=null?`${bed} bedroom${bed===1?'':'s'}`:'',heat?`${heat} heating`:'',yr?`built ${yr}`:'',area?`${area} m²`:'',fl].filter(Boolean).join(' · ')}
 
@@ -201,7 +201,7 @@ const lines=r=>VPI.lines(r,CAT);
 function paintFields(){$('officer').innerHTML=`<option value="">Select name…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;paintInv();
  $('yn').innerHTML=YN.map(([k,l])=>`<div class="q"><b>${esc(l)}</b><div class="ticks" data-radio="${k}"></div></div>`).join('');
  document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${v}</label>`).join('')});toggles()}
-function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:'';const sv=SURVEYORS.properties[String(S.propRef||'').trim().toUpperCase()];$('surveyorLine').hidden=!sv;$('surveyorLine').textContent=sv?`Property surveyor in HMS: ${sv}. They will be copied into the email.`:''}
+function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:'';const ref=String(S.propRef||'').trim().toUpperCase(),sv=SURVEYORS.properties[ref];$('surveyorLine').hidden=!ref;$('surveyorLine').textContent=sv?`Property surveyor in HMS: ${sv}. They will be copied into the email.`:`No surveyor found in HMS for this property, so the ${SURVEYORS.fallback?.name||'Property Services team'} will be copied into the email.`}
 function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOtherWrap').hidden=S.redec!=='Other';$('colourOtherWrap').hidden=S.colour!=='Other'}
 
 function roomHtml(r){const L=lines(r),n=L.length,gen=r.type==='general';

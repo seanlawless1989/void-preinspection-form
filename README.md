@@ -37,7 +37,7 @@ Property search uses `site/properties.json` (Active Properties export, 7 Oct 202
   npm run sync
   ```
 
-  The HMS **Active Properties w/ ref** view (Reference and Surveyor columns) is the one to use; the current file was built from its 21 Oct 2026 export (4,650 properties). The work order view works too: its Property address is matched to `site/properties.json` by postcode and first line, and when a property has jobs under several surveyors the Voids jobs win, then the surveyor with the most jobs. The script prints how many properties it matched and any surveyor emails it had to guess; check those in the file. A property with no surveyor in the file simply gets no extra CC.
+  The HMS **Active Properties w/ ref** view (Reference and Surveyor columns) is the one to use; the current file was built from its 21 Oct 2026 export (4,650 properties). The work order view works too: its Property address is matched to `site/properties.json` by postcode and first line, and when a property has jobs under several surveyors the Voids jobs win, then the surveyor with the most jobs. The script prints how many properties it matched and any surveyor emails it had to guess; check those in the file. A property with no surveyor in the file (or no property reference) is copied to the `fallback` mailbox in the same file, propertyservicesteam@northstarhg.co.uk.
 
 ## Run it locally
 

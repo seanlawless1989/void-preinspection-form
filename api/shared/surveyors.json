@@ -1,6 +1,10 @@
 {
- "generated": "2026-10-21T11:00:44.972Z",
+ "generated": "2026-10-21T11:04:19.220Z",
  "source": "Active Properties w- ref 21-10-2026 12-00-09.xlsx",
+ "fallback": {
+  "name": "Property Services team",
+  "email": "propertyservicesteam@northstarhg.co.uk"
+ },
  "emails": {
   "Afolabi Olaniyi": "Afolabi.Olaniyi@northstarhg.co.uk",
   "Alexandra McGirr": "Alexandra.McGirr@northstarhg.co.uk",

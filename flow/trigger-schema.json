@@ -28,6 +28,9 @@
   "surveyorEmail": {
    "type": "string"
   },
+  "surveyorFound": {
+   "type": "boolean"
+  },
   "recordFileName": {
    "type": "string"
   },

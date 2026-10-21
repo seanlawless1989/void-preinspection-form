@@ -6,7 +6,7 @@
 // The export needs a Surveyor column and either a property reference column (best: a property
 // view of HMS) or the work order view's "Property" address, which is matched to site/properties.json.
 // When a property has jobs under more than one surveyor, Voids jobs win, then the surveyor with
-// the most jobs, then the most recent. Emails already in surveyors.json are kept, so a corrected
+// the most jobs, then the most recent. Properties with no surveyor go to the fallback mailbox. Emails already in surveyors.json are kept, so a corrected
 // address only needs fixing once; new surveyors get firstname.lastname@northstarhg.co.uk.
 const fs = require('fs'), path = require('path');
 const XLSX = require('xlsx');
@@ -96,7 +96,8 @@ for (const name of [...new Set(Object.values(properties))].sort()) {
   emails[name] = old.emails?.[name] || name.replace(/'/g, '').split(' ').join('.') + '@northstarhg.co.uk';
   if (!old.emails?.[name]) guessed.push(`${name} -> ${emails[name]}`);
 }
-fs.writeFileSync(OUT, JSON.stringify({ generated: new Date().toISOString(), source: path.basename(file), emails, properties }, null, 1) + '\n');
+const fallback = old.fallback || { name: 'Property Services team', email: 'propertyservicesteam@northstarhg.co.uk' };
+fs.writeFileSync(OUT, JSON.stringify({ generated: new Date().toISOString(), source: path.basename(file), fallback, emails, properties }, null, 1) + '\n');
 
 const perSurveyor = {};
 for (const n of Object.values(properties)) perSurveyor[n] = (perSurveyor[n] || 0) + 1;

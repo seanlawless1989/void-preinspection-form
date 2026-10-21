@@ -60,7 +60,7 @@ Same as step 5 but Uri `_api/web/lists/getbytitle('Void Pre-Inspection Inventory
 The email goes out from whichever account owns the flow's Outlook connection, so with **Send an email (V2)** every submission looks as if it came from the flow's owner. To send from a team mailbox instead (for example a Voids or no-reply mailbox), use **Send an email from a shared mailbox (V2)**, put that mailbox's address in *Original Mailbox Address*, and fill in the same fields below. The flow owner needs **Send As** permission on the mailbox (Exchange admin centre → Mailboxes → the mailbox → Delegation).
 
 * To: `triggerBody()?['emailTo']`
-* CC: `triggerBody()?['emailCc']` (semicolon separated; already includes the supported officer and the property's surveyor from `shared/surveyors.json`)
+* CC: `triggerBody()?['emailCc']` (semicolon separated; already includes the supported officer and the property's surveyor from `shared/surveyors.json`, or the Property Services team mailbox when HMS has no surveyor for the property)
 * Subject: `triggerBody()?['emailSubject']`
 * Body: switch to code view `</>` and put `triggerBody()?['emailHtml']` as an expression
 * Attachments Name: `triggerBody()?['recordFileName']`, Content: `body('Get_file_content')`

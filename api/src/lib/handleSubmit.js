@@ -14,11 +14,12 @@ const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFracti
 const str = (v, max = 2000) => String(v ?? '').slice(0, max);
 const safeName = s => String(s).replace(/[\\/:*?"<>|#%~&{}]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-// The property's surveyor in HMS (shared/surveyors.json, built from an HMS export), or null.
+// The property's surveyor in HMS (shared/surveyors.json, built from an HMS export). When the
+// property or its surveyor isn't known, the Property Services team mailbox gets the copy instead.
 function surveyorFor(propRef) {
   const name = SURVEYORS.properties[String(propRef || '').trim().toUpperCase()];
   const email = name && SURVEYORS.emails[name];
-  return name && email ? { name, email } : null;
+  return name && email ? { name, email, fallback: false } : { ...SURVEYORS.fallback, fallback: true };
 }
 
 class InputError extends Error {}
@@ -131,7 +132,7 @@ function emailHtml(f, ref, works, total, by, surveyor) {
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
 <p>Reference <b>${esc(ref)}</b>, submitted by ${esc(by.name)}. The PDF report is attached and saved in the Void Pre-Inspection Records library.</p>
 ${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}, estimated ${money(total)} at NHF8 base rates.</p>`}
-<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${surveyor ? row('Property surveyor', surveyor.name) : ''}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
+<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${row('Property surveyor', surveyor.fallback ? `Not found in HMS, copied to the ${surveyor.name}` : surveyor.name)}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>
 ${inventoryHtml(f)}</div>`;
@@ -171,7 +172,7 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
   const surveyor = surveyorFor(f.propRef);
-  const cc = [officerEmail, surveyor?.email, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
+  const cc = [officerEmail, surveyor.email, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
     .filter((x, i, a) => EMAIL_RE.test(x) && x.toLowerCase() !== user.email.toLowerCase() && a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i)
     .slice(0, 10);
 
@@ -183,8 +184,9 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     submittedByEmail: user.email,
     address: f.address.replace(/\s*\n\s*/g, ', '),
     propRef: f.propRef,
-    surveyorName: surveyor?.name || '',
-    surveyorEmail: surveyor?.email || '',
+    surveyorName: surveyor.name,
+    surveyorEmail: surveyor.email,
+    surveyorFound: !surveyor.fallback,
     noWorks: f.noWorks,
     worksValue: total,
     recordFileName: `${ref} - ${safeName(addr || 'Property').slice(0, 60)} - Void Pre-Inspection - ${VPI.ukDate(f.date).replace(/\//g, '-')}.pdf`,
