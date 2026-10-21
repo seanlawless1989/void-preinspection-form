@@ -2,6 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { handleSubmit, principal } = require('../src/lib/handleSubmit');
+// The tests don't depend on the live property-to-surveyor list; each one that needs a surveyor sets it.
+const SV = require('../shared/surveyors.json');
+SV.properties = {};
 
 const PDF = Buffer.from('%PDF-1.4 test').toString('base64');
 const who = (email = 'sean.lawless@northstarhg.co.uk') => ({ 'x-ms-client-principal': Buffer.from(JSON.stringify({ userDetails: email, userRoles: ['anonymous', 'authenticated'], claims: [{ typ: 'name', val: 'Sean Lawless' }] })).toString('base64') });
@@ -121,7 +124,6 @@ test('inventory works on a no-works void and is validated when switched on', asy
 });
 
 test('copies in the property surveyor from HMS', async () => {
-  const SV = require('../shared/surveyors.json');
   SV.properties.ZETL0200703 = 'Denise Manning';
   try {
     const r = await run({ form: form({ cc: '' }), pdfBase64: PDF });
