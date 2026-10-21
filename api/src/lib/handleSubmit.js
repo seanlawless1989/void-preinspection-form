@@ -22,6 +22,10 @@ function surveyorFor(propRef) {
   return name && email ? { name, email, fallback: false } : { ...SURVEYORS.fallback, fallback: true };
 }
 
+// Sean is copied into every submission while the form beds in. Remove this, or move the date,
+// when he no longer needs it; after the date it stops on its own.
+const MONITOR_CC = { email: 'sean.lawless@northstarhg.co.uk', until: '2026-12-01' };
+
 class InputError extends Error {}
 const fail = m => { throw new InputError(m); };
 
@@ -96,7 +100,7 @@ function validate(f) {
   if (!f.address) fail('Enter the property address.');
   for (const [k, l] of VPI.YN) if (!['Yes', 'No'].includes(f[k])) fail(`Answer Yes or No for "${l}".`);
   for (const [k, vals] of Object.entries(VPI.CHOICES)) if (f[k] && !vals.includes(f[k])) fail(`Choose a valid ${k === 'redec' ? 'redecoration' : 'colour'}.`);
-  if (!f.redec) fail('Choose the redecoration: full, part or other.');
+  if (!f.redec) fail('Choose the redecoration: full, part, no or other.');
   if (f.redec === 'Other' && !f.redecOther) fail('Describe the redecoration for "Other".');
   if (f.colour === 'Other' && !f.colourOther) fail('Give the colour for "Other".');
   if (f.inventory.on) {
@@ -172,7 +176,8 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
   const surveyor = surveyorFor(f.propRef);
-  const cc = [officerEmail, surveyor.email, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
+  const monitor = submittedAt < MONITOR_CC.until ? MONITOR_CC.email : '';
+  const cc = [officerEmail, surveyor.email, monitor, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
     .filter((x, i, a) => EMAIL_RE.test(x) && x.toLowerCase() !== user.email.toLowerCase() && a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i)
     .slice(0, 10);
 
