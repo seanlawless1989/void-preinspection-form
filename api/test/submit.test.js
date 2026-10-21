@@ -140,3 +140,9 @@ test('copies in the property surveyor from HMS', async () => {
     assert.equal(noRef.sent.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk');
   } finally { delete SV.properties.ZETL0200703; }
 });
+
+test('Sean is copied in while the form beds in, then not', async () => {
+  const send = async when => { let sent; await handleSubmit({ headers: who('clare.latham@northstarhg.co.uk'), body: { form: form({ cc: '' }), pdfBase64: PDF } }, { postToFlow: async p => { sent = p; return { ok: true }; }, now: () => new Date(when) }); return sent; };
+  assert.equal((await send('2026-10-21T13:00:00Z')).emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk;sean.lawless@northstarhg.co.uk');
+  assert.equal((await send('2026-12-01T09:00:00Z')).emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk');
+});
