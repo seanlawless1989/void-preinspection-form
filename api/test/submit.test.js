@@ -119,3 +119,18 @@ test('inventory works on a no-works void and is validated when switched on', asy
   const undecided = await run({ form: form({ inventory: { on: true, rooms: { lounge: { items: {}, lists: { Furniture: [{ text: 'Sofa' }] } } } } }), pdfBase64: PDF });
   assert.equal(undecided.status, 400); assert.match(undecided.body.error, /Stay, Remove or Clean/);
 });
+
+test('copies in the property surveyor from HMS', async () => {
+  const SV = require('../shared/surveyors.json');
+  SV.properties.ZETL0200703 = 'Denise Manning';
+  try {
+    const r = await run({ form: form({ cc: '' }), pdfBase64: PDF });
+    assert.equal(r.status, 200);
+    assert.equal(r.sent.emailCc, `Laurie.Edmundson@northstarhg.co.uk;${SV.emails['Denise Manning']}`);
+    assert.equal(r.sent.surveyorName, 'Denise Manning');
+    assert.match(r.sent.emailHtml, /Property surveyor.*Denise Manning/);
+    const other = await run({ form: form({ cc: '', propRef: 'NOPE0000000' }), pdfBase64: PDF });
+    assert.equal(other.sent.emailCc, 'Laurie.Edmundson@northstarhg.co.uk', 'no surveyor known, no extra CC');
+    assert.equal(other.sent.surveyorName, '');
+  } finally { delete SV.properties.ZETL0200703; }
+});

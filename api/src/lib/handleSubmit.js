@@ -5,6 +5,7 @@
 const crypto = require('crypto');
 const VPI = require('../../shared/preinspection');
 const CAT = VPI.catalogue(require('../../shared/sors.json'));
+const SURVEYORS = require('../../shared/surveyors.json');
 
 const MAX_PDF_BYTES = 6e6;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -12,6 +13,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const str = (v, max = 2000) => String(v ?? '').slice(0, max);
 const safeName = s => String(s).replace(/[\\/:*?"<>|#%~&{}]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+// The property's surveyor in HMS (shared/surveyors.json, built from an HMS export), or null.
+function surveyorFor(propRef) {
+  const name = SURVEYORS.properties[String(propRef || '').trim().toUpperCase()];
+  const email = name && SURVEYORS.emails[name];
+  return name && email ? { name, email } : null;
+}
 
 class InputError extends Error {}
 const fail = m => { throw new InputError(m); };
@@ -117,13 +125,13 @@ function inventoryHtml(f) {
   return `<h3 style="color:#005291">Inventory</h3>${block || '<p>No items recorded.</p>'}${f.inventory.access ? `<p><b>Access instructions:</b> ${esc(f.inventory.access)}</p>` : ''}${f.inventory.clearance ? `<p><b>Clearance instructions:</b> ${esc(f.inventory.clearance)}</p>` : ''}`;
 }
 
-function emailHtml(f, ref, works, total, by) {
+function emailHtml(f, ref, works, total, by, surveyor) {
   const row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;vertical-align:top"><b>${esc(k)}</b></td><td style="padding:4px 0">${esc(v)}</td></tr>`;
   return `<div style="font-family:Arial,sans-serif;color:#06122b">
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
 <p>Reference <b>${esc(ref)}</b>, submitted by ${esc(by.name)}. The PDF report is attached and saved in the Void Pre-Inspection Records library.</p>
 ${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}, estimated ${money(total)} at NHF8 base rates.</p>`}
-<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
+<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${surveyor ? row('Property surveyor', surveyor.name) : ''}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>
 ${inventoryHtml(f)}</div>`;
@@ -162,7 +170,8 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   const total = Math.round(works.reduce((a, w) => a + w.LineValue, 0) * 100) / 100;
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
-  const cc = [officerEmail, ...f.cc.split(/[,;\s]+/)].map(x => x.trim())
+  const surveyor = surveyorFor(f.propRef);
+  const cc = [officerEmail, surveyor?.email, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
     .filter((x, i, a) => EMAIL_RE.test(x) && x.toLowerCase() !== user.email.toLowerCase() && a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i)
     .slice(0, 10);
 
@@ -174,6 +183,8 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     submittedByEmail: user.email,
     address: f.address.replace(/\s*\n\s*/g, ', '),
     propRef: f.propRef,
+    surveyorName: surveyor?.name || '',
+    surveyorEmail: surveyor?.email || '',
     noWorks: f.noWorks,
     worksValue: total,
     recordFileName: `${ref} - ${safeName(addr || 'Property').slice(0, 60)} - Void Pre-Inspection - ${VPI.ukDate(f.date).replace(/\//g, '-')}.pdf`,
@@ -213,7 +224,7 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     emailTo: user.email,
     emailCc: cc.join(';'),
     emailSubject: `Void pre-inspection${f.noWorks ? ' (NO WORKS – close void)' : ''} – ${addr} – ${VPI.ukDate(f.date)} – ${ref}`,
-    emailHtml: emailHtml(f, ref, works, total, user),
+    emailHtml: emailHtml(f, ref, works, total, user, surveyor),
   };
 
   const res = await postToFlow(payload);
@@ -221,4 +232,4 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   return { status: 200, body: { reference: ref, worksCount: works.length, worksValue: total } };
 }
 
-module.exports = { handleSubmit, principal, MAX_PDF_BYTES };
+module.exports = { handleSubmit, principal, surveyorFor, MAX_PDF_BYTES };

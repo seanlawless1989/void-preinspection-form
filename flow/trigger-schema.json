@@ -22,6 +22,12 @@
   "propRef": {
    "type": "string"
   },
+  "surveyorName": {
+   "type": "string"
+  },
+  "surveyorEmail": {
+   "type": "string"
+  },
   "recordFileName": {
    "type": "string"
   },

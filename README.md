@@ -5,7 +5,7 @@ North Star's Supported Housing void pre-inspection, built from Laurie Edmondson'
 * creates a branded PDF report in the browser (photos included) and downloads a copy;
 * saves the PDF to the **Void Pre-Inspection Records** SharePoint library;
 * adds a row to the **Void Pre-Inspections** list, one row per SOR to **Void Pre-Inspection Works** and, if an inventory was completed, one row per item to **Void Pre-Inspection Inventory**;
-* emails the person who submitted it, CC the supported officer, with the PDF attached and the SOR codes by room ready to paste into HMS.
+* emails the person who submitted it, CC the supported officer and the property's surveyor in HMS, with the PDF attached and the SOR codes by room ready to paste into HMS.
 
 It follows the same pattern as the Awaab's Law and Property Services inspection forms: Azure Static Web App with Entra sign-in, one Azure Function, and a Power Automate flow.
 
@@ -29,6 +29,15 @@ Property search uses `site/properties.json` (Active Properties export, 7 Oct 202
 * Who can complete the form (supported officers and the Property Services surveyors), the inventory rooms and items, Yes/No questions, the tick list for each kind of room, default rooms: `shared/preinspection.js`. Run `npm run sync` afterwards.
 * Wording and layout: `site/index.html`.
 * Property list: replace `site/properties.json` and `site/property-details.json` with newer exports in the same shape.
+* Property surveyors: `shared/surveyors.json` maps each property reference to its HMS surveyor, and each surveyor to an email. Rebuild it from an HMS Endeavour export with a Surveyor column, then sync and commit:
+
+  ```
+  npm install                                    # once, for the Excel reader
+  npm run surveyors -- "All Work Orders Overview (SL) 21-10-2026.xlsx"
+  npm run sync
+  ```
+
+  A property view with a property reference column is best. The work order view works too: its Property address is matched to `site/properties.json` by postcode and first line, and when a property has jobs under several surveyors the Voids jobs win, then the surveyor with the most jobs. The script prints how many properties it matched and any surveyor emails it had to guess; check those in the file. A property with no surveyor in the file simply gets no extra CC.
 
 ## Run it locally
 
