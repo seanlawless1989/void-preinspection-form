@@ -1,7 +1,7 @@
 // Copies shared/ (the single source of truth) into site/ and api/shared/.
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
-for (const f of ['preinspection.js', 'sors.json'])
+for (const f of ['preinspection.js', 'sors.json', 'surveyors.json'])
   for (const dir of ['site', 'api/shared']) {
     fs.mkdirSync(path.join(root, dir), { recursive: true });
     fs.copyFileSync(path.join(root, 'shared', f), path.join(root, dir, f));

@@ -100,7 +100,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </style>
 </head><body>
 <header class="topbar"><div class="topbar-inner"><img src="northstar-logo.png" alt="North Star"><span class="eyebrow">Supported Housing</span><span class="who" id="who"></span></div></header>
-<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you and the officer. You can also complete the optional inventory at the end, to record which items stay, which are removed and which need cleaning.</p></div></div>
+<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you, the officer and the property's surveyor. You can also complete the optional inventory at the end, to record which items stay, which are removed and which need cleaning.</p></div></div>
 
 <main><div class="card">
 <div id="restore" class="settings" hidden><b>Unsent pre-inspection found on this device.</b> <span id="restoreWhat"></span><br><button type="button" class="small" id="restoreYes">Carry on with it</button><button type="button" class="small ghost" id="restoreNo">Start a new one</button></div>
@@ -112,6 +112,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 <label id="officerOtherWrap" hidden class="full">Name<input id="officerOther" type="text" autocomplete="name"></label>
 <div class="combo full"><label>Find the property<input id="propQ" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing the address, postcode or property reference" role="combobox" aria-expanded="false" aria-controls="propRes"></label><ul class="results" id="propRes" hidden role="listbox"></ul></div>
 <p class="hint full" id="stockLine" hidden></p>
+<p class="hint full" id="surveyorLine" hidden></p>
 <label class="full">Property address<textarea id="address" rows="2" placeholder="Filled in when you pick the property above, or type it if it isn't listed"></textarea></label>
 <label>Property reference<input id="propRef" type="text" autocomplete="off"></label>
 <label>Property type<input id="propType" type="text" list="propTypes" placeholder="e.g. Flat, room in shared house"></label>
@@ -178,7 +179,7 @@ const officerEmail=()=>VPI.officerEmail(S);
 
 // ---- Property list (same list as the Awaab's Law and Property Services forms) ----
 const NOT_HOMES=new Set(['Scheme','Estate','Garage','Garage Block','Office','Playground','Block']);
-let PROPS=[],DETAILS={};
+let PROPS=[],DETAILS={},SURVEYORS={properties:{},emails:{},fallback:null};
 function findProps(q){const t=q.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);if(!t.length)return[];const out=[];for(const p of PROPS){if(t.every(w=>p.k.includes(w))){out.push(p);if(out.length>=30)break}}return out}
 function stockText(ref){const d=DETAILS[ref];if(!d)return'';const [bed,floor,heat,yr,area]=d;const fl=floor==null?'':floor===0?'ground floor':`floor ${floor}`;return [bed!=null?`${bed} bedroom${bed===1?'':'s'}`:'',heat?`${heat} heating`:'',yr?`built ${yr}`:'',area?`${area} m²`:'',fl].filter(Boolean).join(' · ')}
 
@@ -200,7 +201,7 @@ const lines=r=>VPI.lines(r,CAT);
 function paintFields(){$('officer').innerHTML=`<option value="">Select name…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;paintInv();
  $('yn').innerHTML=YN.map(([k,l])=>`<div class="q"><b>${esc(l)}</b><div class="ticks" data-radio="${k}"></div></div>`).join('');
  document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${v}</label>`).join('')});toggles()}
-function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:''}
+function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:'';const ref=String(S.propRef||'').trim().toUpperCase(),sv=SURVEYORS.properties[ref];$('surveyorLine').hidden=!ref;$('surveyorLine').textContent=sv?`Property surveyor in HMS: ${sv}. They will be copied into the email.`:`No surveyor found in HMS for this property, so the ${SURVEYORS.fallback?.name||'Property Services team'} will be copied into the email.`}
 function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOtherWrap').hidden=S.redec!=='Other';$('colourOtherWrap').hidden=S.colour!=='Other'}
 
 function roomHtml(r){const L=lines(r),n=L.length,gen=r.type==='general';
@@ -415,13 +416,14 @@ const toDataUrl=blob=>new Promise((ok,no)=>{const f=new FileReader();f.onload=()
  whoAmI();
  try{
   const get=async u=>{const r=await fetch(u);if(!r.ok)throw Error(u+' '+r.status);return r};
-  const [sr,pr,dr,lr]=await Promise.all(['sors.json','properties.json','property-details.json','northstar-logo.png'].map(get));
+  const [sr,pr,dr,lr,svr]=await Promise.all(['sors.json','properties.json','property-details.json','northstar-logo.png','surveyors.json'].map(get));
   const raw=await sr.json();CAT=VPI.catalogue(raw);
   SORS=CAT.list.map(s=>({...s,words:norm(s.code+' '+s.description+' '+s.element+' '+s.section+' '+s.subsection).split(' '),subj:norm(s.description.split(':')[0]).split(' '),desc:norm(s.description).split(' ')}));
   SOR_BY_ID=new Map(SORS.map(s=>[s.id,s]));BY_CODE=new Map();SORS.forEach(s=>{if(!BY_CODE.has(s.code))BY_CODE.set(s.code,s)});
   $('sorCount').textContent=SORS.length.toLocaleString('en-GB');
   PROPS=(await pr.json()).properties.filter(p=>!NOT_HOMES.has(p[2])).map(([ref,address,type])=>({ref,address,type,k:(ref+' '+address).toLowerCase().replace(/[^a-z0-9]+/g,' ')}));
   DETAILS=(await dr.json()).details;
+  SURVEYORS=await svr.json();
   LOGO=await toDataUrl(await lr.blob());
   {const im=new Image();im.src=LOGO;await im.decode().catch(()=>{});if(im.naturalWidth)LOGO_R=im.naturalHeight/im.naturalWidth}
  }catch(e){say('The form could not load its data ('+(e.message||e)+'). Reload the page.','err');return}

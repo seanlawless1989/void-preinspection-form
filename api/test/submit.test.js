@@ -2,6 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { handleSubmit, principal } = require('../src/lib/handleSubmit');
+// The tests don't depend on the live property-to-surveyor list; each one that needs a surveyor sets it.
+const SV = require('../shared/surveyors.json');
+SV.properties = {};
 
 const PDF = Buffer.from('%PDF-1.4 test').toString('base64');
 const who = (email = 'sean.lawless@northstarhg.co.uk') => ({ 'x-ms-client-principal': Buffer.from(JSON.stringify({ userDetails: email, userRoles: ['anonymous', 'authenticated'], claims: [{ typ: 'name', val: 'Sean Lawless' }] })).toString('base64') });
@@ -39,7 +42,7 @@ test('shapes the flow payload and re-prices SORs from the book', async () => {
   assert.equal(p.sharepointItem.PhotoCount, 2);
   assert.equal(p.worksValue, Math.round(p.worksItems.reduce((a, w) => a + w.LineValue, 0) * 100) / 100);
   assert.equal(p.emailTo, 'sean.lawless@northstarhg.co.uk');
-  assert.equal(p.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;voids@northstarhg.co.uk', 'officer CC once, case-insensitive');
+  assert.equal(p.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk;voids@northstarhg.co.uk', 'officer CC once, case-insensitive');
   assert.match(p.recordFileName, /^VPI-20261015-.{4} - WEBB HOUSE, Flat 3 - Void Pre-Inspection - 15-10-2026\.pdf$/);
   assert.match(p.sharepointItem.SORText, /460012  Final clean .* x 2  \(Whole flat\)/);
   assert.equal(p.pdfBase64, PDF);
@@ -76,7 +79,7 @@ test('property surveyors can be chosen as the person completing the form', async
     assert.ok(VPI.OFFICERS.some(o => o[0] === n && /@northstarhg\.co\.uk$/.test(o[1])), n);
   const r = await run({ form: form({ officer: 'Amy Rose', cc: '' }), pdfBase64: PDF });
   assert.equal(r.status, 200);
-  assert.equal(r.sent.emailCc, 'Amy.Rose@northstarhg.co.uk');
+  assert.equal(r.sent.emailCc, 'Amy.Rose@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk');
   assert.equal(r.sent.sharepointItem.Officer, 'Amy Rose');
 });
 
@@ -118,4 +121,22 @@ test('inventory works on a no-works void and is validated when switched on', asy
   assert.equal(empty.status, 400); assert.match(empty.body.error, /nothing is recorded/);
   const undecided = await run({ form: form({ inventory: { on: true, rooms: { lounge: { items: {}, lists: { Furniture: [{ text: 'Sofa' }] } } } } }), pdfBase64: PDF });
   assert.equal(undecided.status, 400); assert.match(undecided.body.error, /Stay, Remove or Clean/);
+});
+
+test('copies in the property surveyor from HMS', async () => {
+  SV.properties.ZETL0200703 = 'Denise Manning';
+  try {
+    const r = await run({ form: form({ cc: '' }), pdfBase64: PDF });
+    assert.equal(r.status, 200);
+    assert.equal(r.sent.emailCc, `Laurie.Edmundson@northstarhg.co.uk;${SV.emails['Denise Manning']}`);
+    assert.equal(r.sent.surveyorName, 'Denise Manning');
+    assert.equal(r.sent.surveyorFound, true);
+    assert.match(r.sent.emailHtml, /Property surveyor.*Denise Manning/);
+    const other = await run({ form: form({ cc: '', propRef: 'NOPE0000000' }), pdfBase64: PDF });
+    assert.equal(other.sent.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk', 'no surveyor known: Property Services team instead');
+    assert.equal(other.sent.surveyorFound, false);
+    assert.match(other.sent.emailHtml, /Not found in HMS, copied to the Property Services team/);
+    const noRef = await run({ form: form({ cc: '', propRef: '' }), pdfBase64: PDF });
+    assert.equal(noRef.sent.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk');
+  } finally { delete SV.properties.ZETL0200703; }
 });

@@ -6,10 +6,12 @@
   "scripts": {
     "sync": "node scripts/sync-shared.js",
     "dev": "npm run sync && node scripts/dev-server.js",
-    "test": "npm run sync && node --test api/test/*.test.js"
+    "test": "npm run sync && node --test api/test/*.test.js",
+    "surveyors": "node scripts/build-surveyors.js"
   },
   "devDependencies": {
     "jspdf": "2.5.1",
-    "jspdf-autotable": "3.8.2"
+    "jspdf-autotable": "3.8.2",
+    "xlsx": "^0.18.5"
   }
 }
