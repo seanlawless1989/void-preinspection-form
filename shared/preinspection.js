@@ -46,7 +46,9 @@
   ].sort((a, b) => a[0].localeCompare(b[0], 'en'));
 
   const YN = [['gasCap', 'Gas cap'], ['epc', 'EPC required'], ['utilities', 'Utilities swap to North Star needed'], ['elec', 'Electric on'], ['pat', 'Supported white goods PAT']];
-  const CHOICES = { redec: ['Full', 'Part', 'No', 'Other'], colour: ['White', 'Grey', 'Other'] };
+  // Whole-dwelling redecoration SORs (NHF8 470xxx), picked by property size when redecoration is Full.
+  const REDEC_SORS = [['470001', '1 bed flat'], ['470002', '2 bed flat'], ['470003', '3 bed flat'], ['470010', '2 bed house'], ['470011', '3 bed house'], ['470012', '4 bed house']];
+  const CHOICES = { redec: ['Full', 'Part', 'No', 'Other'], colour: ['White', 'Grey', 'Other'], redecSor: REDEC_SORS.map(r => r[0]) };
 
   // sqm: the paper asks for square metres; q: default quantity.
   const ITEMS = {
@@ -117,6 +119,9 @@
   // First line of the address, keeping "Flat 3, 7 Zetland Road" and "WEBB HOUSE, Flat 3" together.
   const addr1 = address => { const p = String(address || '').split(/\n|,/).map(x => x.trim()).filter(Boolean), unit = /^(flat|room|apartment|unit|apt)\b/i; return (unit.test(p[0] || '') || unit.test(p[1] || '')) && p[1] ? p[0] + ', ' + p[1] : p[0] || ''; };
   const choice = (f, k, other) => f[k] === 'Other' ? `Other: ${f[other] || ''}` : (f[k] || '—');
+  const redecSorLabel = code => { const r = REDEC_SORS.find(x => x[0] === code); return r ? `${r[0]} (${r[1]})` : ''; };
+  // "Full, SOR 470002 (2 bed flat)" when Full redecoration has a SOR; otherwise the plain choice.
+  const redecChoice = f => f.redec === 'Full' && f.redecSor ? `Full, SOR ${redecSorLabel(f.redecSor)}` : choice(f, 'redec', 'redecOther');
   const officerName = f => f.officer === 'Other' ? String(f.officerOther || '').trim() : (f.officer || '');
   const officerEmail = f => (OFFICERS.find(o => o[0] === f.officer) || [])[1] || '';
 
@@ -150,5 +155,5 @@
     return [head].concat(rs.length ? rs.map(r => '\n' + roomSorText(r, cat)) : ['\nNo repairs ticked yet.']).join('\n');
   }
 
-  return { OFFICERS, YN, CHOICES, ITEMS, DEFAULT_ROOMS, INVENTORY, INV_ACTS, invActText, invRows, invHasContent, inventoryText, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText };
+  return { OFFICERS, YN, CHOICES, REDEC_SORS, redecSorLabel, redecChoice, ITEMS, DEFAULT_ROOMS, INVENTORY, INV_ACTS, invActText, invRows, invHasContent, inventoryText, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText };
 });

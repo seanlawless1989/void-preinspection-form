@@ -61,6 +61,8 @@ test('validation messages', async () => {
   await bad({ officer: 'Someone Else' }, /from the list/);
   await bad({ epc: '' }, /EPC required/);
   await bad({ redec: '' }, /redecoration/);
+  await bad({ redec: 'Full', redecSor: '' }, /redecoration SOR/);
+  await bad({ redec: 'Full', redecSor: '470099' }, /valid redecoration SOR/);
   await bad({ rooms: [{ name: 'Bed 1', type: 'living', ticks: { 10: { qty: '' } } }] }, /area in m²/);
   await bad({ rooms: [{ name: 'Bed 1', type: 'living', ticks: {} }] }, /Tick at least one/);
   await bad({ rooms: [{ name: 'Bed 1', type: 'living', ticks: {}, extra: [{ id: 'nope', code: 'nope', qty: '1' }] }] }, /not in the NHF8 book/);
@@ -152,4 +154,17 @@ test('redecoration can be No (no redecoration needed)', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.sent.sharepointItem.Redecoration, 'No');
   assert.match(r.sent.emailHtml, /<b>Redecoration<\/b><\/td><td[^>]*>No</);
+});
+
+test('full redecoration records the SOR for the property size', async () => {
+  const r = await run({ form: form({ redec: 'Full', redecSor: '470002' }), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.sharepointItem.Redecoration, 'Full, SOR 470002 (2 bed flat)');
+  assert.match(r.sent.emailHtml, /Full, SOR 470002 \(2 bed flat\)/);
+});
+
+test('a SOR is ignored unless redecoration is Full', async () => {
+  const r = await run({ form: form({ redec: 'Part', redecSor: '470002' }), pdfBase64: PDF });
+  assert.equal(r.status, 200);
+  assert.equal(r.sent.sharepointItem.Redecoration, 'Part');
 });

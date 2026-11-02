@@ -70,7 +70,7 @@ function cleanInventory(v) {
 function clean(f) {
   if (!f || typeof f !== 'object') fail('The form is missing.');
   const o = {};
-  for (const k of ['id', 'officer', 'officerOther', 'propRef', 'date', 'address', 'propType', 'duration', 'keysafe', 'access', 'hs', 'redec', 'redecOther', 'colour', 'colourOther', 'notes', 'external', 'cc', 'stockRecord'])
+  for (const k of ['id', 'officer', 'officerOther', 'propRef', 'date', 'address', 'propType', 'duration', 'keysafe', 'access', 'hs', 'redec', 'redecOther', 'redecSor', 'colour', 'colourOther', 'notes', 'external', 'cc', 'stockRecord'])
     o[k] = str(f[k]).trim();
   for (const [k] of VPI.YN) o[k] = str(f[k]);
   o.noWorks = f.noWorks === true;
@@ -99,8 +99,10 @@ function validate(f) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) fail('Enter the date of inspection.');
   if (!f.address) fail('Enter the property address.');
   for (const [k, l] of VPI.YN) if (!['Yes', 'No'].includes(f[k])) fail(`Answer Yes or No for "${l}".`);
-  for (const [k, vals] of Object.entries(VPI.CHOICES)) if (f[k] && !vals.includes(f[k])) fail(`Choose a valid ${k === 'redec' ? 'redecoration' : 'colour'}.`);
+  for (const [k, vals] of Object.entries(VPI.CHOICES)) if (f[k] && !vals.includes(f[k])) fail(`Choose a valid ${k === 'redec' ? 'redecoration' : k === 'redecSor' ? 'redecoration SOR' : 'colour'}.`);
   if (!f.redec) fail('Choose the redecoration: full, part, no or other.');
+  if (f.redec === 'Full' && !f.redecSor) fail('Choose the redecoration SOR for the size of the property.');
+  if (f.redec !== 'Full') f.redecSor = '';
   if (f.redec === 'Other' && !f.redecOther) fail('Describe the redecoration for "Other".');
   if (f.colour === 'Other' && !f.colourOther) fail('Give the colour for "Other".');
   if (f.inventory.on) {
@@ -136,7 +138,7 @@ function emailHtml(f, ref, works, total, by, surveyor) {
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
 <p>Reference <b>${esc(ref)}</b>, submitted by ${esc(by.name)}. The PDF report is attached and saved in the Void Pre-Inspection Records library.</p>
 ${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}, estimated ${money(total)} at NHF8 base rates.</p>`}
-<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${row('Property surveyor', surveyor.fallback ? `Not found in HMS, copied to the ${surveyor.name}` : surveyor.name)}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.choice(f, 'redec', 'redecOther'))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
+<table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${row('Property surveyor', surveyor.fallback ? `Not found in HMS, copied to the ${surveyor.name}` : surveyor.name)}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.redecChoice(f))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>
 ${inventoryHtml(f)}</div>`;
@@ -210,7 +212,7 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
       Keysafe: f.keysafe,
       Access: f.access,
       GasCap: f.gasCap, EPCRequired: f.epc, UtilitiesSwap: f.utilities, ElectricOn: f.elec, WhiteGoodsPAT: f.pat,
-      Redecoration: VPI.choice(f, 'redec', 'redecOther'),
+      Redecoration: VPI.redecChoice(f),
       Colour: f.colour ? VPI.choice(f, 'colour', 'colourOther') : '',
       HSIssues: f.hs,
       Notes: f.notes,

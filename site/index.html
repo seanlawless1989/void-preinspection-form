@@ -125,6 +125,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 <label>Health &amp; safety issues<textarea id="hs" rows="2" placeholder="Anything contractors need to know before going in"></textarea></label>
 <div class="grid">
 <div class="q"><b>Redecoration</b><div class="ticks" data-radio="redec"></div><label id="redecOtherWrap" hidden>Redecoration details<input id="redecOther" type="text"></label></div>
+<div class="q" id="redecSorWrap" hidden><b>Redecoration SOR <small>(choose by property size)</small></b><div class="ticks" data-radio="redecSor"></div></div>
 <div class="q"><b>Colour</b><div class="ticks" data-radio="colour"></div><label id="colourOtherWrap" hidden>Colour<input id="colourOther" type="text"></label></div>
 </div>
 <label>Notes, e.g. best times for the contractor to attend or appointments<textarea id="notes" rows="2"></textarea></label>
@@ -173,7 +174,7 @@ const today=()=>new Date().toLocaleDateString('en-CA');
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
 const MAX_PHOTOS=12;
-const {OFFICERS,YN,CHOICES,ITEMS,DEFAULT_ROOMS,INVENTORY}=VPI;
+const {OFFICERS,YN,CHOICES,REDEC_SORS,ITEMS,DEFAULT_ROOMS,INVENTORY}=VPI;
 const officerName=()=>VPI.officerName(S);
 const officerEmail=()=>VPI.officerEmail(S);
 
@@ -191,7 +192,7 @@ function findSors(q){const t=norm(q).split(' ').filter(Boolean).map(w=>SYN[w]||w
 const unitOf=VPI.unitOf,lineValue=VPI.lineValue,qtyText=VPI.qtyText;
 // ---- State ----
 let S=blank(),busy=false;
-function blank(){return{id:uid(),officer:'',officerOther:'',propRef:'',date:today(),address:'',propType:'',duration:'',keysafe:'',access:'',gasCap:'',epc:'',utilities:'',elec:'',pat:'',hs:'',redec:'',redecOther:'',colour:'',colourOther:'',notes:'',external:'',noWorks:false,inv:blankInv(),rooms:DEFAULT_ROOMS.map(([n,t])=>newRoom(n,t)),cc:''}}
+function blank(){return{id:uid(),officer:'',officerOther:'',propRef:'',date:today(),address:'',propType:'',duration:'',keysafe:'',access:'',gasCap:'',epc:'',utilities:'',elec:'',pat:'',hs:'',redec:'',redecOther:'',redecSor:'',colour:'',colourOther:'',notes:'',external:'',noWorks:false,inv:blankInv(),rooms:DEFAULT_ROOMS.map(([n,t])=>newRoom(n,t)),cc:''}}
 function blankInv(){return{on:false,rooms:{},access:'',clearance:''}}
 function newRoom(name,type){return{id:uid(),name,type,ticks:{},extra:[],notes:'',photos:[]}}
 const FIELDS=['officer','officerOther','date','address','propRef','propType','duration','keysafe','access','hs','redecOther','colourOther','notes','external','cc'];
@@ -200,9 +201,9 @@ const lines=r=>VPI.lines(r,CAT);
 
 function paintFields(){$('officer').innerHTML=`<option value="">Select name…</option>`+OFFICERS.map(o=>o[0]).concat('Other').map(n=>`<option ${n===S.officer?'selected':''}>${esc(n)}</option>`).join('');FIELDS.forEach(k=>{$(k).value=S[k]??''});$('propQ').value='';paintStock();$('noWorks').checked=!!S.noWorks;paintInv();
  $('yn').innerHTML=YN.map(([k,l])=>`<div class="q"><b>${esc(l)}</b><div class="ticks" data-radio="${k}"></div></div>`).join('');
- document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${v}</label>`).join('')});toggles()}
+ document.querySelectorAll('[data-radio]').forEach(box=>{const k=box.dataset.radio,vals=CHOICES[k]||['Yes','No'];box.setAttribute('role','radiogroup');box.innerHTML=vals.map(v=>`<label class="tick"><input type="radio" name="${k}" value="${v}" ${S[k]===v?'checked':''}>${k==='redecSor'?esc(VPI.redecSorLabel(v).replace(' (',' · ').replace(')','')):v}</label>`).join('')});toggles()}
 function paintStock(){const t=S.propRef?stockText(S.propRef):'';$('stockLine').hidden=!t;$('stockLine').textContent=t?'From the stock record: '+t:'';const ref=String(S.propRef||'').trim().toUpperCase(),sv=SURVEYORS.properties[ref];$('surveyorLine').hidden=!ref;$('surveyorLine').textContent=sv?`Property surveyor in HMS: ${sv}. They will be copied into the email.`:`No surveyor found in HMS for this property, so the ${SURVEYORS.fallback?.name||'Property Services team'} will be copied into the email.`}
-function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOtherWrap').hidden=S.redec!=='Other';$('colourOtherWrap').hidden=S.colour!=='Other'}
+function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOtherWrap').hidden=S.redec!=='Other';$('redecSorWrap').hidden=S.redec!=='Full';$('colourOtherWrap').hidden=S.colour!=='Other'}
 
 function roomHtml(r){const L=lines(r),n=L.length,gen=r.type==='general';
  return `<details class="room" data-id="${r.id}" open><summary><span class="name">${esc(r.name)}</span><span class="count${n?' has':''}">${n?`${n} repair${n===1?'':'s'}`:'No repairs ticked'}</span></summary><div class="room-body">
@@ -324,6 +325,7 @@ function valid(){
  const need=[['date','Enter the date of inspection.'],['address','Enter the property address.']];for(const [k,m] of need)if(!String(S[k]).trim()){say(m,'err');$(k).focus();return false}
  const yn=YN.find(([k])=>!S[k]);if(yn){say(`Answer Yes or No for "${yn[1]}".`,'err');document.querySelector(`[data-radio="${yn[0]}"]`).scrollIntoView({block:'center'});return false}
  if(!S.redec){say('Choose the redecoration: full, part, no or other.','err');document.querySelector('[data-radio="redec"]').scrollIntoView({block:'center'});return false}
+ if(S.redec==='Full'&&!S.redecSor){say('Choose the redecoration SOR for the size of the property.','err');document.querySelector('[data-radio="redecSor"]').scrollIntoView({block:'center'});return false}
  if(S.redec==='Other'&&!S.redecOther.trim()){say('Describe the redecoration for "Other".','err');$('redecOther').focus();return false}
  if(S.colour==='Other'&&!S.colourOther.trim()){say('Give the colour for "Other".','err');$('colourOther').focus();return false}
  if(S.inv.on){const rows=VPI.invRows(S.inv),bad=rows.find(r=>r.listed&&!r.act&&!r.clean);
@@ -354,7 +356,7 @@ function buildPdf(q){
  const H=t=>{if(y>262){doc.addPage();y=18}doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,ML,y);doc.setDrawColor(...COMBAT);doc.setLineWidth(.8);doc.line(ML,y+1.8,ML+18,y+1.8);y+=5};
  const K={fontStyle:'bold',cellWidth:44,textColor:OCEAN};
  H('Property details');
- T({startY:y,theme:'grid',body:[['Completed by',officerName(),'Date',ukDate(S.date)],['Address',{content:S.address.replace(/\s*\n\s*/g,', '),colSpan:3}],['Property reference',S.propRef||'—','Stock record',stockText(S.propRef)||'—'],['Property type',S.propType||'—','Void duration',S.duration||'—'],['Keysafe number',S.keysafe||'—','Access',S.access||'—'],...[[0,1],[2,3]].map(([a,b])=>[YN[a][1],S[YN[a][0]],YN[b][1],S[YN[b][0]]]),[YN[4][1],S[YN[4][0]],'',''],['Redecoration',choice('redec','redecOther'),'Colour',choice('colour','colourOther')],['H&S issues',{content:S.hs||'None recorded',colSpan:3}],['Notes / appointments',{content:S.notes||'—',colSpan:3}],['External works',{content:S.external||'—',colSpan:3}]],columnStyles:{0:K,2:{fontStyle:'bold',cellWidth:40,textColor:OCEAN}}});
+ T({startY:y,theme:'grid',body:[['Completed by',officerName(),'Date',ukDate(S.date)],['Address',{content:S.address.replace(/\s*\n\s*/g,', '),colSpan:3}],['Property reference',S.propRef||'—','Stock record',stockText(S.propRef)||'—'],['Property type',S.propType||'—','Void duration',S.duration||'—'],['Keysafe number',S.keysafe||'—','Access',S.access||'—'],...[[0,1],[2,3]].map(([a,b])=>[YN[a][1],S[YN[a][0]],YN[b][1],S[YN[b][0]]]),[YN[4][1],S[YN[4][0]],'',''],['Redecoration',VPI.redecChoice(S),'Colour',choice('colour','colourOther')],['H&S issues',{content:S.hs||'None recorded',colSpan:3}],['Notes / appointments',{content:S.notes||'—',colSpan:3}],['External works',{content:S.external||'—',colSpan:3}]],columnStyles:{0:K,2:{fontStyle:'bold',cellWidth:40,textColor:OCEAN}}});
  H('Repairs by room');
  if(S.noWorks){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.text('No repairs needed. The officer has marked this void as needing no works so it can be closed off.',ML,y+3);y+=10}
  for(const r of S.rooms){const L=lines(r);if(!L.length&&!r.notes.trim()&&!r.photos.length)continue;if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(r.name,ML,y+1);y+=3;
