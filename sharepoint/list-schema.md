@@ -29,7 +29,7 @@ One row per submitted pre-inspection. Title holds the reference (`VPI-20261015-D
 | UtilitiesSwap | Choice: Yes, No | |
 | ElectricOn | Choice: Yes, No | |
 | WhiteGoodsPAT | Choice: Yes, No | |
-| Redecoration | Single line | Full, Part, No or "Other: …" |
+| Redecoration | Single line | Full, Part, No or "Other: …". When Full, it also carries the SOR for the property size, e.g. "Full, SOR 470002 (2 bed flat)" |
 | Colour | Single line | |
 | HSIssues | Multiple lines (plain) | |
 | Notes | Multiple lines (plain) | |
