@@ -196,7 +196,7 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     surveyorFound: !surveyor.fallback,
     noWorks: f.noWorks,
     worksValue: total,
-    recordFileName: `${ref} - ${safeName(addr || 'Property').slice(0, 60)} - Void Pre-Inspection - ${VPI.ukDate(f.date).replace(/\//g, '-')}.pdf`,
+    recordFileName: `${String(f.propRef || '').trim().replace(/[^A-Za-z0-9]+/g, '_') || 'noRef'}_VoidPreInspection_${f.date}_${ref.split('-').pop()}.pdf`, // UPRN_VoidPreInspection_YYYY-MM-DD_<ref tail>
     pdfBase64: body.pdfBase64,
     sharepointItem: {
       Title: ref,

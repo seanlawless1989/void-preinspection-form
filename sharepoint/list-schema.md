@@ -4,7 +4,9 @@ Create these on the SharePoint site that will hold the records (for example the 
 
 ## Library: Void Pre-Inspection Records
 
-A document library. Each submission adds one PDF named `VPI-yyyymmdd-XXXX - <address> - Void Pre-Inspection - dd-mm-yyyy.pdf`. No extra columns needed.
+A document library. Each submission adds one PDF named `<UPRN>_VoidPreInspection_<YYYY-MM-DD>_<XXXX>.pdf`, for example `ZETL0200703_VoidPreInspection_2026-11-04_A1B2.pdf`. Earlier records are named `VPI-yyyymmdd-XXXX - <address> - Void Pre-Inspection - dd-mm-yyyy.pdf`.
+
+**PDF naming convention (all inspection forms):** `UPRN_FormType_YYYY-MM-DD_<ref tail>.pdf`. UPRN is the property reference (`noRef` if none), the date is the inspection/assessment date, and the tail is the end of the submission reference so two records for one property on the same day never clash. Form types: `ScoringMatrix` (Awaab's Law), `PropertyInspection` (Property Services), `VoidPreInspection` (Void pre-inspection). No extra columns needed.
 
 ## List: Void Pre-Inspections
 
