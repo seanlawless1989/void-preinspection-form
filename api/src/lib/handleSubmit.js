@@ -137,7 +137,7 @@ function emailHtml(f, ref, works, total, by, surveyor) {
   return `<div style="font-family:Arial,sans-serif;color:#06122b">
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
 <p>Reference <b>${esc(ref)}</b>, submitted by ${esc(by.name)}. The PDF report is attached and saved in the Void Pre-Inspection Records library.</p>
-${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}, estimated ${money(total)} at NHF8 base rates.</p>`}
+${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs needed. Please close off this void.</b></p>' : `<p>${works.length} repair${works.length === 1 ? '' : 's'}.</p>`}
 <table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${row('Property surveyor', surveyor.fallback ? `Not found in HMS, copied to the ${surveyor.name}` : surveyor.name)}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.redecChoice(f))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>

@@ -159,7 +159,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </div>
 
 </main>
-<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" and "Property Inventory" forms. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines). Values are estimates at NHF8 base rates.</footer>
+<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" and "Property Inventory" forms. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines).</footer>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="preinspection.js"></script>
@@ -207,9 +207,9 @@ function toggles(){$('officerOtherWrap').hidden=S.officer!=='Other';$('redecOthe
 
 function roomHtml(r){const L=lines(r),n=L.length,gen=r.type==='general';
  return `<details class="room" data-id="${r.id}" open><summary><span class="name">${esc(r.name)}</span><span class="count${n?' has':''}">${n?`${n} repair${n===1?'':'s'}`:'No repairs ticked'}</span></summary><div class="room-body">
-<div class="table-wrap"><table class="works"><thead><tr><th></th><th>Repair <small style="display:inline">(SOR code)</small></th><th>${gen?'Qty':'Qty / m²'}</th><th class="n val">Estimate</th></tr></thead><tbody>
-${ITEMS[r.type].map((it,i)=>{const t=r.ticks[i],on=!!t,s=BY_CODE.get(it.c)||{},fid=`${r.id}-${i}`;return `<tr class="${on?'on':''}"><td class="cb"><input type="checkbox" id="${fid}" data-tick="${i}" ${on?'checked':''}></td><td><label for="${fid}">${esc(it.t)}</label><small>${esc(it.c)} · ${esc(s.description||'')}</small>${gen&&on?`<input type="text" data-tw="${i}" value="${esc(t.where)}" placeholder="Room or external" aria-label="Where: ${esc(it.t)}">`:''}</td><td class="qty"><input type="number" min="0" step="any" data-tq="${i}" value="${on?esc(t.qty):''}" ${on?'':'disabled'} placeholder="${it.sqm?'m²':''}" aria-label="Quantity: ${esc(it.t)}"><span>${it.sqm?'m²':esc(unitOf(s.uom))}</span></td><td class="n val" data-tv="${i}">${on?money(lineValue({rate:s.rate,qty:t.qty})):''}</td></tr>`}).join('')}
-${r.extra.map((e,j)=>`<tr class="on"><td class="cb"><button type="button" class="remove" data-act="removeExtra" data-j="${j}" aria-label="Remove ${esc(e.code)}">✕</button></td><td><label>${esc(e.description)}</label><small>${esc(e.code)} · added from NHF8 book</small></td><td class="qty"><input type="number" min="0" step="any" data-xq="${j}" value="${esc(e.qty)}" aria-label="Quantity"><span>${esc(unitOf(e.uom))}</span></td><td class="n val" data-xv="${j}">${money(lineValue(e))}</td></tr>`).join('')}
+<div class="table-wrap"><table class="works"><thead><tr><th></th><th>Repair <small style="display:inline">(SOR code)</small></th><th>${gen?'Qty':'Qty / m²'}</th></tr></thead><tbody>
+${ITEMS[r.type].map((it,i)=>{const t=r.ticks[i],on=!!t,s=BY_CODE.get(it.c)||{},fid=`${r.id}-${i}`;return `<tr class="${on?'on':''}"><td class="cb"><input type="checkbox" id="${fid}" data-tick="${i}" ${on?'checked':''}></td><td><label for="${fid}">${esc(it.t)}</label><small>${esc(it.c)} · ${esc(s.description||'')}</small>${gen&&on?`<input type="text" data-tw="${i}" value="${esc(t.where)}" placeholder="Room or external" aria-label="Where: ${esc(it.t)}">`:''}</td><td class="qty"><input type="number" min="0" step="any" data-tq="${i}" value="${on?esc(t.qty):''}" ${on?'':'disabled'} placeholder="${it.sqm?'m²':''}" aria-label="Quantity: ${esc(it.t)}"><span>${it.sqm?'m²':esc(unitOf(s.uom))}</span></td></tr>`}).join('')}
+${r.extra.map((e,j)=>`<tr class="on"><td class="cb"><button type="button" class="remove" data-act="removeExtra" data-j="${j}" aria-label="Remove ${esc(e.code)}">✕</button></td><td><label>${esc(e.description)}</label><small>${esc(e.code)} · added from NHF8 book</small></td><td class="qty"><input type="number" min="0" step="any" data-xq="${j}" value="${esc(e.qty)}" aria-label="Quantity"><span>${esc(unitOf(e.uom))}</span></td></tr>`).join('')}
 </tbody></table></div>
 <div class="extra"><div class="sor-row"><div class="combo"><label>Add another SOR from the NHF8 book<input type="search" data-sor-q autocomplete="off" spellcheck="false" placeholder="Code or words, e.g. 630521 or toilet pan" role="combobox" aria-expanded="false"></label><ul class="results" data-sor-res hidden role="listbox"></ul></div><label>Quantity<input type="number" data-sor-qty min="0" step="any" value="1"></label><button type="button" class="small" data-act="addExtra">+ Add</button></div></div>
 <label>Notes for ${esc(r.name)}<textarea data-k="notes" rows="2">${esc(r.notes)}</textarea></label>
@@ -219,7 +219,7 @@ ${r.extra.map((e,j)=>`<tr class="on"><td class="cb"><button type="button" class=
 </div></details>`}
 function renderRooms(){$('rooms').innerHTML=S.rooms.map(roomHtml).join('');totals()}
 function renderRoom(r,focusSel){const old=$('rooms').querySelector(`[data-id="${r.id}"]`);const tmp=document.createElement('div');tmp.innerHTML=roomHtml(r);const nu=tmp.firstElementChild;nu.open=old?old.open:true;old?old.replaceWith(nu):$('rooms').append(nu);if(focusSel)nu.querySelector(focusSel)?.focus();totals()}
-function totals(){const all=S.rooms.flatMap(lines),v=all.reduce((a,l)=>a+lineValue(l),0);$('worksTotal').textContent=S.noWorks?'No repairs needed: the report will ask for this void to be closed off.':`${all.length} repair${all.length===1?'':'s'} across ${S.rooms.filter(r=>lines(r).length).length} room${S.rooms.filter(r=>lines(r).length).length===1?'':'s'} · estimated ${money(v)} at NHF8 base rates`;$('sorText').value=sorText();
+function totals(){const all=S.rooms.flatMap(lines),v=all.reduce((a,l)=>a+lineValue(l),0);$('worksTotal').textContent=S.noWorks?'No repairs needed: the report will ask for this void to be closed off.':`${all.length} repair${all.length===1?'':'s'} across ${S.rooms.filter(r=>lines(r).length).length} room${S.rooms.filter(r=>lines(r).length).length===1?'':'s'}`;$('sorText').value=sorText();
  document.querySelectorAll('.room').forEach(d=>{const r=S.rooms.find(x=>x.id===d.dataset.id);if(!r)return;const n=lines(r).length,c=d.querySelector('.count');c.textContent=n?`${n} repair${n===1?'':'s'}`:'No repairs ticked';c.classList.toggle('has',!!n)})}
 function roomSorText(r){return VPI.roomSorText(r,CAT)}
 function sorText(){return VPI.sorText(S,CAT)}
@@ -261,9 +261,9 @@ document.addEventListener('change',e=>{const t=e.target;if(t.id==='officer'){S.o
 const roomOf=el=>{const d=el.closest('.room');return d&&{div:d,r:S.rooms.find(x=>x.id===d.dataset.id)}};
 $('rooms').addEventListener('input',e=>{const h=roomOf(e.target);if(!h)return;const {r,div}=h,t=e.target;
  if(t.dataset.k){r[t.dataset.k]=t.value;save()}
- else if(t.hasAttribute('data-tq')){const i=+t.dataset.tq;if(r.ticks[i]){r.ticks[i].qty=t.value;const s=BY_CODE.get(ITEMS[r.type][i].c)||{};div.querySelector(`[data-tv="${i}"]`).textContent=money(lineValue({rate:s.rate,qty:t.value}));totals();save()}}
+ else if(t.hasAttribute('data-tq')){const i=+t.dataset.tq;if(r.ticks[i]){r.ticks[i].qty=t.value;totals();save()}}
  else if(t.hasAttribute('data-tw')){const i=+t.dataset.tw;if(r.ticks[i]){r.ticks[i].where=t.value;totals();save()}}
- else if(t.hasAttribute('data-xq')){const j=+t.dataset.xq;r.extra[j].qty=t.value;div.querySelector(`[data-xv="${j}"]`).textContent=money(lineValue(r.extra[j]));totals();save()}
+ else if(t.hasAttribute('data-xq')){const j=+t.dataset.xq;r.extra[j].qty=t.value;totals();save()}
  else if(t.hasAttribute('data-sor-q'))showSors(div)});
 $('rooms').addEventListener('change',async e=>{const h=roomOf(e.target);if(!h)return;const {r}=h,t=e.target;
  if(t.hasAttribute('data-tick')){const i=+t.dataset.tick,it=ITEMS[r.type][i];if(t.checked)r.ticks[i]={qty:it.sqm?'':String(it.q||1),where:''};else delete r.ticks[i];renderRoom(r,t.checked?(it.sqm?`[data-tq="${i}"]`:(r.type==='general'?`[data-tw="${i}"]`:`#${CSS.escape(t.id)}`)):`#${CSS.escape(t.id)}`);save()}
@@ -276,7 +276,7 @@ $('rooms').addEventListener('click',e=>{const b=e.target.closest('button[data-ac
  case'removeRoom':{if((lines(r).length||r.photos.length||r.notes.trim())&&!confirm(`Remove ${r.name} and its ticked repairs, notes and photos?`))return;S.rooms=S.rooms.filter(x=>x!==r);div.remove();totals();save();return}
  case'copyRoom':copy(roomSorText(r),b);return}
  renderRoom(r);save()});
-function showSors(div,keep){const q=div.querySelector('[data-sor-q]'),list=div.querySelector('[data-sor-res]');if(!keep)q.dataset.picked='';const hits=findSors(q.value);q._hits=hits;q._cur=-1;if(!q.value.trim()){list.hidden=true;return}list.innerHTML=hits.length?hits.map((s,i)=>`<li role="option" data-i="${i}"><b>${esc(s.code)} · ${esc(s.description)}</b><small>${esc(s.element)} · ${esc(s.subsection)} · ${esc(unitOf(s.uom))} · ${money(s.rate)}</small></li>`).join(''):'<li class="none">No matching SORs. Try fewer words or the code.</li>';list.hidden=false;q.setAttribute('aria-expanded','true')}
+function showSors(div,keep){const q=div.querySelector('[data-sor-q]'),list=div.querySelector('[data-sor-res]');if(!keep)q.dataset.picked='';const hits=findSors(q.value);q._hits=hits;q._cur=-1;if(!q.value.trim()){list.hidden=true;return}list.innerHTML=hits.length?hits.map((s,i)=>`<li role="option" data-i="${i}"><b>${esc(s.code)} · ${esc(s.description)}</b><small>${esc(s.element)} · ${esc(s.subsection)} · ${esc(unitOf(s.uom))}</small></li>`).join(''):'<li class="none">No matching SORs. Try fewer words or the code.</li>';list.hidden=false;q.setAttribute('aria-expanded','true')}
 function pickSor(div,s){const q=div.querySelector('[data-sor-q]');q.value=s.code+' · '+s.description;q.dataset.picked=s.id;div.querySelector('[data-sor-res]').hidden=true;q.setAttribute('aria-expanded','false');const n=div.querySelector('[data-sor-qty]');n.focus();n.select()}
 $('rooms').addEventListener('mousedown',e=>{const li=e.target.closest('[data-sor-res] li[data-i]');if(!li)return;e.preventDefault();const div=li.closest('.room');pickSor(div,div.querySelector('[data-sor-q]')._hits[+li.dataset.i])});
 $('rooms').addEventListener('keydown',e=>{const q=e.target;if(!q.hasAttribute('data-sor-q'))return;const div=q.closest('.room'),list=div.querySelector('[data-sor-res]'),hits=q._hits||[];
@@ -349,8 +349,8 @@ function buildPdf(q){
  doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('Void Pre-Inspection',W-MR,17,{align:'right'});
  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('Supported Housing · Voids',W-MR,24,{align:'right'});
  let y=42;
- const all=S.rooms.flatMap(lines),grand=all.reduce((a,l)=>a+lineValue(l),0);
- const [bg,fg,msg]=S.noWorks?[[255,248,219],[112,84,0],'No repairs needed: please close off this void']:[[233,248,245],OCEAN,`${all.length} repair${all.length===1?'':'s'} · estimated ${money(grand)} at NHF8 base rates`];
+ const all=S.rooms.flatMap(lines);
+ const [bg,fg,msg]=S.noWorks?[[255,248,219],[112,84,0],'No repairs needed: please close off this void']:[[233,248,245],OCEAN,`${all.length} repair${all.length===1?'':'s'}`];
  doc.setFillColor(...bg);doc.roundedRect(ML,y,CW,12,3,3,'F');doc.setTextColor(...fg);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(msg,ML+4,y+8);y+=17;
  const T=(opts)=>{doc.autoTable({margin:{left:ML,right:MR},styles:{font:'helvetica',fontSize:9,cellPadding:2.2,textColor:INK,lineColor:[213,226,234],lineWidth:.2},headStyles:{fillColor:OCEAN,textColor:255,fontStyle:'bold'},...opts});y=doc.lastAutoTable.finalY+6};
  const H=t=>{if(y>262){doc.addPage();y=18}doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,ML,y);doc.setDrawColor(...COMBAT);doc.setLineWidth(.8);doc.line(ML,y+1.8,ML+18,y+1.8);y+=5};
@@ -360,15 +360,13 @@ function buildPdf(q){
  H('Repairs by room');
  if(S.noWorks){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.text('No repairs needed. The officer has marked this void as needing no works so it can be closed off.',ML,y+3);y+=10}
  for(const r of S.rooms){const L=lines(r);if(!L.length&&!r.notes.trim()&&!r.photos.length)continue;if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(r.name,ML,y+1);y+=3;
-  const sub=L.reduce((a,l)=>a+lineValue(l),0);
-  if(L.length)T({startY:y,head:[['SOR','Repair','Qty','Unit','Estimate']],body:[...L.map(l=>[l.code,l.label+(l.where?` (${l.where})`:'')+(l.extra?'':`\n${l.description}`),String(l.qty),unitOf(l.uom),money(lineValue(l))]),[{content:'Room total',colSpan:4,styles:{fontStyle:'bold',halign:'right'}},{content:money(sub),styles:{fontStyle:'bold'}}]],columnStyles:{0:{cellWidth:18,fontStyle:'bold'},2:{cellWidth:13,halign:'right'},3:{cellWidth:13},4:{cellWidth:24,halign:'right'}},didParseCell:d=>{if(d.section==='body'&&d.column.index===1&&typeof d.cell.raw==='string'&&d.cell.raw.includes('\n'))d.cell.styles.fontSize=8.5}});
+  if(L.length)T({startY:y,head:[['SOR','Repair','Qty','Unit']],body:[...L.map(l=>[l.code,l.label+(l.where?` (${l.where})`:'')+(l.extra?'':`\n${l.description}`),String(l.qty),unitOf(l.uom)])],columnStyles:{0:{cellWidth:18,fontStyle:'bold'},2:{cellWidth:13,halign:'right'},3:{cellWidth:13}},didParseCell:d=>{if(d.section==='body'&&d.column.index===1&&typeof d.cell.raw==='string'&&d.cell.raw.includes('\n'))d.cell.styles.fontSize=8.5}});
   else{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);doc.text('No repairs ticked.',ML,y+4);y+=9}
   if(r.notes.trim()){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...INK);const ls=doc.splitTextToSize('Notes: '+r.notes,CW);if(y+ls.length*4>280){doc.addPage();y=18}doc.text(ls,ML,y);y+=ls.length*4+3}
   // Photos two to a row, each as large as fits its half of the page, in its own shape (portrait stays portrait).
   if(r.photos.length){const gap=4,pw=(CW-gap)/2,maxH=100;for(let i=0;i<r.photos.length;i+=2){const row=r.photos.slice(i,i+2).map(p=>{const src=q<1?recompress(p,q):p,pr=doc.getImageProperties(src),s=Math.min(pw/pr.width,maxH/pr.height);return{src,w:pr.width*s,h:pr.height*s}});const rh=Math.max(...row.map(o=>o.h));if(y+rh>282){doc.addPage();y=18}row.forEach((o,k)=>doc.addImage(o.src,'JPEG',ML+k*(pw+gap)+(pw-o.w)/2,y,o.w,o.h,undefined,'FAST'));y+=rh+4}y+=2}}
  const empty=S.rooms.filter(r=>!lines(r).length).map(r=>r.name);
  if(!S.noWorks&&empty.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...MUTED);const ls=doc.splitTextToSize('No repairs ticked in: '+empty.join(', ')+'.',CW);if(y+ls.length*4>280){doc.addPage();y=18}doc.text(ls,ML,y);y+=ls.length*4+4}
- if(!S.noWorks){doc.setFillColor(233,248,245);if(y>270){doc.addPage();y=18}doc.roundedRect(ML,y,CW,10,2,2,'F');doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(`Estimated value of repairs: ${money(grand)} at NHF8 base rates`,ML+4,y+6.5);y+=16}
  if(S.inv.on){const rows=VPI.invRows(S.inv),rooms=[...new Set(rows.map(r=>r.room))];
   if(y>240){doc.addPage();y=18}H('Inventory');
   for(const rm of rooms){if(y>255){doc.addPage();y=18}doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(rm,ML,y+1);y+=3;
