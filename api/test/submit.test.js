@@ -43,7 +43,7 @@ test('shapes the flow payload and re-prices SORs from the book', async () => {
   assert.equal(p.worksValue, Math.round(p.worksItems.reduce((a, w) => a + w.LineValue, 0) * 100) / 100);
   assert.equal(p.emailTo, 'sean.lawless@northstarhg.co.uk');
   assert.equal(p.emailCc, 'Laurie.Edmundson@northstarhg.co.uk;propertyservicesteam@northstarhg.co.uk;voids@northstarhg.co.uk', 'officer CC once, case-insensitive');
-  assert.match(p.recordFileName, /^ZETL0200703_VoidPreInspection_2026-10-15_[0-9A-F]{4}\.pdf$/);
+  assert.match(p.recordFileName, /^VPI-20261015-.{4} - WEBB HOUSE, Flat 3 - Void Pre-Inspection - 15-10-2026\.pdf$/);
   assert.match(p.sharepointItem.SORText, /460012  Final clean .* x 2  \(Whole flat\)/);
   assert.equal(p.pdfBase64, PDF);
 });
