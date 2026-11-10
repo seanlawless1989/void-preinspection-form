@@ -96,13 +96,20 @@ td.n,th.n{text-align:right;white-space:nowrap}td small{color:var(--muted);displa
 footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);font-size:12px}
 [hidden]{display:none!important}
 @media(max-width:700px){.hero h1{font-size:34px}.hero-inner{padding:28px 16px 72px}main{padding:0 12px}.card{padding:18px 16px}.grid,.yn,.addroom,.sor-row{grid-template-columns:1fr}.topbar-inner{padding:12px 16px}.topbar img{height:40px}.topbar .eyebrow{display:none}table{font-size:13px}td,th{padding:6px 4px}.room-body{padding:0 10px 12px}.room>summary{padding:12px 12px}.works .val{display:none}.works td.qty{width:96px}td input[type=number]{width:62px}.table-wrap{overflow-x:auto}}
+.review{margin:0 0 24px;padding:20px 22px;border-radius:16px;background:var(--tint);border-left:6px solid var(--ocean)}
+.review h2{margin-bottom:4px}.review .meta{margin:0 0 8px;font-weight:600}.review ul{margin:6px 0 0;padding-left:20px}.review li{margin:2px 0}
+.review .changes{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--card)}.review .changes b{color:var(--ocean)}
+.review.err{border-left-color:#c0392b}.review.err h2{color:#c0392b}
+body.review-off .card>section,body.review-off .toolbar{display:none}
+.openrev{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.openrev input{width:220px;display:inline-block;margin:0;padding:8px 10px;font-size:13px}.openrev button{margin:0}
 .topbar .who{margin-left:auto;font-size:13px;color:var(--muted)}.ref{font-size:20px;font-weight:800;color:var(--ocean)}
 </style>
 </head><body>
 <header class="topbar"><div class="topbar-inner"><img src="northstar-logo.png" alt="North Star"><span class="eyebrow">Supported Housing</span><span class="who" id="who"></span></div></header>
-<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span>Repairs &amp; SOR codes by room</span></h1><p>For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you, the officer and the property's surveyor. You can also complete the optional inventory at the end, to record which items stay, which are removed and which need cleaning.</p></div></div>
+<div class="hero"><div class="hero-inner"><div class="eyebrow">Supported Housing · Voids</div><h1><b>Void pre-inspection</b><span id="heroSub">Repairs &amp; SOR codes by room</span></h1><p id="heroText">For Supported Housing staff on supported voids. Fill in the property details, tick the repairs needed in each room and add measurements where asked. Submitting creates the PDF report, saves it to SharePoint and emails it to you, the officer and the property's surveyor. You can also complete the optional inventory at the end, to record which items stay, which are removed and which need cleaning.</p></div></div>
 
 <main><div class="card">
+<div id="reviewBox" class="review" hidden role="region" aria-label="Surveyor review"></div>
 <div id="restore" class="settings" hidden><b>Unsent pre-inspection found on this device.</b> <span id="restoreWhat"></span><br><button type="button" class="small" id="restoreYes">Carry on with it</button><button type="button" class="small ghost" id="restoreNo">Start a new one</button></div>
 
 <section><h2><span class="num">01</span>Property details</h2>
@@ -150,7 +157,7 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </div></section>
 
 <div class="toolbar">
-<label>Also email a copy to (optional, comma separated). The person selected above is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
+<label id="ccWrap">Also email a copy to (optional, comma separated). The person selected above is copied in automatically<input id="cc" type="text" placeholder="e.g. a surveyor or the voids team"></label>
 <button type="button" class="primary" id="submit">Submit pre-inspection</button><button type="button" class="ghost" id="saveProgress">Save progress</button><button type="button" class="ghost" id="pdfOnly">Download PDF only</button><button type="button" class="ghost" id="reset">New pre-inspection</button>
 <p id="saved" role="status"></p>
 <p id="notice" role="status" aria-live="polite"></p>
@@ -159,7 +166,8 @@ footer{max-width:1000px;margin:0 auto 32px;padding:0 24px;color:var(--muted);fon
 </div>
 
 </main>
-<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" and "Property Inventory" forms. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines).</footer>
+<footer>North Star Housing Group · Supported Housing void pre-inspection, from the paper "Void Pre Inspection" and "Property Inventory" forms. SOR codes and rates from the NHF Schedule of Rates v8 (<span id="sorCount"></span> lines).
+<form class="openrev" id="openRev"><span>Surveyors: open a submitted pre-inspection to review or change it</span><input id="openRef" type="text" placeholder="e.g. VPI-20261103-D632" aria-label="Pre-inspection reference" autocomplete="off"><button type="submit" class="small ghost">Open</button></form></footer>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="preinspection.js"></script>
@@ -177,6 +185,11 @@ const MAX_PHOTOS=12;
 const {OFFICERS,YN,CHOICES,REDEC_SORS,ITEMS,DEFAULT_ROOMS,INVENTORY}=VPI;
 const officerName=()=>VPI.officerName(S);
 const officerEmail=()=>VPI.officerEmail(S);
+// ---- Surveyor review (?review=VPI-...) ----
+// The surveyor opens a submitted pre-inspection, changes what's needed and saves it as a new review.
+const REVIEW_REF=(new URLSearchParams(location.search).get('review')||'').trim().toUpperCase();
+let REVIEW=null; // {record, reviewer, original}
+const nextRev=()=>REVIEW?REVIEW.record.revision+1:0;
 
 // ---- Property list (same list as the Awaab's Law and Property Services forms) ----
 const NOT_HOMES=new Set(['Scheme','Estate','Garage','Garage Block','Office','Playground','Block']);
@@ -303,19 +316,19 @@ $('propQ').addEventListener('focusout',()=>setTimeout(()=>$('propRes').hidden=tr
 
 // ---- Draft on this device ----
 // Kept in IndexedDB so photos fit (localStorage is only a few MB). Falls back to localStorage without photos.
-const DRAFT='ns-void-preinspection-draft';let saveT;
+const DKEY=REVIEW_REF?'review:'+REVIEW_REF:'current',DRAFT='ns-void-preinspection-draft'+(REVIEW_REF?'-'+REVIEW_REF:'');let saveT;
 const Drafts=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('ns-void-preinspection',1);r.onupgradeneeded=()=>r.result.createObjectStore('drafts');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
  const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{const t=db.transaction('drafts',mode),q=fn(t.objectStore('drafts'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)}));
- return{async get(){try{const d=await tx('readonly',s=>s.get('current'));if(d)return d}catch{}return store.get(DRAFT)},
-  async put(d){try{await tx('readwrite',s=>s.put(d,'current'));store.del(DRAFT);return'all'}catch{}store.set(DRAFT,d);if(store.get(DRAFT))return'all';store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))});return store.get(DRAFT)?'nophotos':''},
-  async del(){store.del(DRAFT);try{await tx('readwrite',s=>s.delete('current'))}catch{}}}})();
+ return{async get(){try{const d=await tx('readonly',s=>s.get(DKEY));if(d)return d}catch{}return store.get(DRAFT)},
+  async put(d){try{await tx('readwrite',s=>s.put(d,DKEY));store.del(DRAFT);return'all'}catch{}store.set(DRAFT,d);if(store.get(DRAFT))return'all';store.set(DRAFT,{...d,rooms:d.rooms.map(r=>({...r,photos:[]}))});return store.get(DRAFT)?'nophotos':''},
+  async del(){store.del(DRAFT);try{await tx('readwrite',s=>s.delete(DKEY))}catch{}}}})();
 const started=d=>d&&d.rooms&&(d.officer||d.address||d.rooms.some(r=>Object.keys(r.ticks||{}).length||r.extra?.length||r.photos?.length||r.notes?.trim()));
 let saveReady=false;
-async function saveNow(){clearTimeout(saveT);if(!saveReady||!started(S))return'';const d={...S,savedAt:new Date().toISOString()};const how=await Drafts.put(d);const at=new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});$('saved').textContent=how==='all'?`Progress saved on this device at ${at}.`:how==='nophotos'?`Progress saved on this device at ${at}, but without photos (this device is out of space).`:'Progress could not be saved on this device. Download PDF only keeps a copy.';return how}
-function save(){clearTimeout(saveT);saveT=setTimeout(saveNow,500)}
+async function saveNow(){clearTimeout(saveT);if(!saveReady||!started(S))return'';const d={...S,savedAt:new Date().toISOString(),...(REVIEW?{baseRevision:REVIEW.record.revision,reviewNotes:$('reviewNotes')?.value||''}:{})};const how=await Drafts.put(d);const at=new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});$('saved').textContent=how==='all'?`Progress saved on this device at ${at}.`:how==='nophotos'?`Progress saved on this device at ${at}, but without photos (this device is out of space).`:'Progress could not be saved on this device. Download PDF only keeps a copy.';return how}
+let chT;function save(){clearTimeout(saveT);saveT=setTimeout(saveNow,500);if(REVIEW){clearTimeout(chT);chT=setTimeout(paintChanges,300)}}
 window.addEventListener('pagehide',()=>saveNow());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
 $('saveProgress').onclick=async()=>{if(!started(S)){say('Choose the officer or find the property first, then save your progress.','err');return}$('restore').hidden=true;saveReady=true;if(await saveNow())say('Progress saved. You can close the page and carry on later on this device and browser.','ok')};
-function load(d){S={...blank(),...d};S.inv={...blankInv(),...(d.inv||{})};paintFields();renderRooms()}
+function load(d){const {baseRevision,reviewNotes,savedAt,...rest}=d;S={...blank(),...rest};S.inv={...blankInv(),...(d.inv||{})};paintFields();renderRooms();if(REVIEW&&$('reviewNotes')){$('reviewNotes').value=reviewNotes||'';paintChanges()}}
 $('reset').onclick=()=>{if(!confirm('Start a new pre-inspection? Anything not submitted will be cleared.'))return;clearTimeout(saveT);Drafts.del();$('saved').textContent='';S=blank();paintFields();renderRooms();$('steps').hidden=true;say('');window.scrollTo({top:0,behavior:'smooth'})};
 
 // ---- Validation ----
@@ -339,11 +352,11 @@ function valid(){
 // ---- PDF report ----
 const OCEAN=[0,82,145],INK=[6,18,43],MUTED=[70,86,107],MINT=[0,255,206],SOUR=[203,249,38],COMBAT=[0,167,150];
 const safe=s=>String(s).replace(/[\\/:*?"<>|#%]+/g,' ').trim();
-function fileBase(){return `${safe(addr1()||'Property').slice(0,60)} - Void Pre-Inspection - ${ukDate(S.date).replace(/\//g,'-')}`}
+function fileBase(){const b=`${safe(addr1()||'Property').slice(0,60)} - Void Pre-Inspection - ${ukDate(S.date).replace(/\//g,'-')}`;return REVIEW?`${REVIEW.record.reference} - ${b} - Review ${nextRev()}`:b}
 const choice=(k,o)=>VPI.choice(S,k,o);
 function buildPdf(q){
  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true});const W=210,ML=14,MR=14,CW=W-ML-MR;
- const footer=()=>{const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(...MUTED);doc.text(`North Star Housing Group · Void pre-inspection · ${addr1()} · ${ukDate(S.date)}`,ML,290);doc.text(`Page ${i} of ${n}`,W-MR,290,{align:'right'})}};
+ const footer=()=>{const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(...MUTED);doc.text(`North Star Housing Group · Void pre-inspection · ${addr1()} · ${ukDate(S.date)}${REVIEW?` · ${REVIEW.record.reference} · Review ${nextRev()}`:''}`,ML,290);doc.text(`Page ${i} of ${n}`,W-MR,290,{align:'right'})}};
  doc.setFillColor(...MINT);doc.rect(0,0,W,34,'F');doc.setFillColor(...SOUR);doc.triangle(0,0,70,0,0,34,'F');
  doc.setFillColor(255,255,255);doc.roundedRect(ML-2,7,58,16,3,3,'F');doc.addImage(LOGO,'PNG',ML,9+(11.3-Math.min(11.3,54*LOGO_R))/2,Math.min(54,11.3/LOGO_R),Math.min(11.3,54*LOGO_R));
  doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('Void Pre-Inspection',W-MR,17,{align:'right'});
@@ -352,6 +365,10 @@ function buildPdf(q){
  const all=S.rooms.flatMap(lines);
  const [bg,fg,msg]=S.noWorks?[[255,248,219],[112,84,0],'No repairs needed: please close off this void']:[[233,248,245],OCEAN,`${all.length} repair${all.length===1?'':'s'}`];
  doc.setFillColor(...bg);doc.roundedRect(ML,y,CW,12,3,3,'F');doc.setTextColor(...fg);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(msg,ML+4,y+8);y+=17;
+ if(REVIEW){const R=REVIEW.record,ch=currentChanges(),notes=($('reviewNotes')?.value||'').trim(),past=R.history||[];
+  doc.setFillColor(0,82,145);doc.roundedRect(ML,y,CW,11,3,3,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(`Surveyor review ${nextRev()} · ${REVIEW.reviewer.name} · ${ukDate(today())}`,ML+4,y+7.3);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(R.reference,W-MR-4,y+7.3,{align:'right'});y+=14;
+  doc.autoTable({startY:y,margin:{left:ML,right:MR},theme:'grid',styles:{font:'helvetica',fontSize:9,cellPadding:2.2,textColor:INK,lineColor:[213,226,234],lineWidth:.2},columnStyles:{0:{fontStyle:'bold',cellWidth:44,textColor:OCEAN}},
+   body:[['First submitted',`${R.submittedBy?.name||''} on ${ukDate(String(R.submittedAt||'').slice(0,10))}`],...past.map(h=>[`Review ${h.revision}`,`${h.by?.name||''} on ${ukDate(String(h.at||'').slice(0,10))}${h.changes?.length?` (${h.changes.length} change${h.changes.length===1?'':'s'})`:' (no changes)'}`]),['Changes in this review',ch.length?ch.map(c=>'• '+c.replace(/→/g,'->')).join('\n'):'No changes: reviewed and agreed'],...(notes?[["Surveyor's notes",notes]]:[])]});y=doc.lastAutoTable.finalY+6}
  const T=(opts)=>{doc.autoTable({margin:{left:ML,right:MR},styles:{font:'helvetica',fontSize:9,cellPadding:2.2,textColor:INK,lineColor:[213,226,234],lineWidth:.2},headStyles:{fillColor:OCEAN,textColor:255,fontStyle:'bold'},...opts});y=doc.lastAutoTable.finalY+6};
  const H=t=>{if(y>262){doc.addPage();y=18}doc.setTextColor(...OCEAN);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(t,ML,y);doc.setDrawColor(...COMBAT);doc.setLineWidth(.8);doc.line(ML,y+1.8,ML+18,y+1.8);y+=5};
  const K={fontStyle:'bold',cellWidth:44,textColor:OCEAN};
@@ -389,8 +406,8 @@ async function whoAmI(){try{const r=await fetch('/.auth/me',{cache:'no-store'});
 function stepUi(names){const ul=$('steps');ul.hidden=false;ul.innerHTML=names.map((n,i)=>`<li id="st${i}">${n}</li>`).join('');return(i,state,html)=>{const li=$('st'+i);li.className=state;if(html)li.innerHTML=html}}
 // The PDF travels to the server as base64; keep it well under the request limits.
 const PDF_LIMIT=6e6;
-function payload(){return{...S,officerName:officerName(),stockRecord:S.propRef?stockText(S.propRef):'',rooms:S.rooms.map(r=>({id:r.id,name:r.name,type:r.type,ticks:r.ticks,extra:r.extra,notes:r.notes,photoCount:r.photos.length})),inventory:S.inv}}
-async function doSubmit(){if(busy||!valid())return;busy=true;const btn=$('submit');btn.disabled=true;say('');
+function payload(){return{...S,officerName:officerName(),stockRecord:S.propRef?stockText(S.propRef):'',rooms:S.rooms.map(r=>({id:r.id,name:r.name,type:r.type,ticks:r.ticks,extra:r.extra,notes:r.notes,photos:r.photos,photoCount:r.photos.length})),inventory:S.inv}}
+async function doSubmit(){if(REVIEW)return doReviewSave();if(busy||!valid())return;busy=true;const btn=$('submit');btn.disabled=true;say('');
  const mark=stepUi(['Create the PDF report','Save it to SharePoint and email it','Download a copy to this device']);
  try{
   mark(0,'run');const pdf=await makePdf(PDF_LIMIT);if(pdf.bytes.byteLength>PDF_LIMIT){mark(0,'fail','The report is too large. Remove some photos and submit again.');say('The report is too large to send.','err');return}
@@ -409,6 +426,48 @@ async function doSubmit(){if(busy||!valid())return;busy=true;const btn=$('submit
  finally{busy=false;btn.disabled=false}}
 function offerDownload(bytes,name,cb){try{const u=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);cb({state:'done',html:'PDF downloaded to this device'})}catch{cb({state:'fail',html:'PDF download not available here'})}}
 $('submit').onclick=doSubmit;
+
+// ---- Surveyor review ----
+function liveForm(){return{...payload(),inventory:S.inv}}
+function currentChanges(){return REVIEW?VPI.changes(REVIEW.original,liveForm(),CAT):[]}
+function paintChanges(){const el=$('reviewChanges');if(!el)return;const ch=currentChanges();el.innerHTML=ch.length?`<b>Your changes so far (${ch.length})</b><ul>${ch.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:'<b>No changes yet.</b> Change anything below. Saving with no changes records the pre-inspection as reviewed and agreed.'}
+function reviewFail(title,msg){const b=$('reviewBox');b.hidden=false;b.className='review err';b.innerHTML=`<h2>${esc(title)}</h2><p>${esc(msg)}</p><p><a href="./">Go to a new pre-inspection</a></p>`;document.body.classList.add('review-off')}
+// Turns the saved record back into the form's working state (extra SORs get their descriptions back from the book).
+function fromRecord(f){const rooms=(f.rooms||[]).map(r=>({id:r.id||uid(),name:r.name,type:r.type,ticks:r.ticks||{},extra:(r.extra||[]).map(e=>{const s=SOR_BY_ID.get(String(e.id))||BY_CODE.get(String(e.code))||{};return{id:s.id||e.id,code:s.code||e.code,description:s.description||e.code,uom:s.uom||'',rate:s.rate||0,qty:String(e.qty??'')}}),notes:r.notes||'',photos:Array.isArray(r.photos)?r.photos:[]}));
+ const {inventory,stockRecord,officerName:_o,...rest}=f;return{...blank(),...rest,cc:'',rooms,inv:{...blankInv(),...(inventory||{})}}}
+function paintReview(){const R=REVIEW.record,b=$('reviewBox'),past=R.history||[];b.hidden=false;b.className='review';
+ b.innerHTML=`<div class="eyebrow">Surveyor review</div><h2>${esc(R.reference)} · review ${nextRev()}</h2><p class="meta">First submitted by ${esc(R.submittedBy?.name||'')} on ${esc(ukDate(String(R.submittedAt||'').slice(0,10)))}. You are reviewing as ${esc(REVIEW.reviewer.name)}.</p>${past.length?`<p class="hint" style="margin:0">Earlier reviews: ${past.map(h=>`review ${h.revision} by ${esc(h.by?.name||'')} on ${esc(ukDate(String(h.at||'').slice(0,10)))}`).join('; ')}.</p>`:''}
+<p class="hint">Change anything on the form: repairs, quantities, SORs, notes, photos or the inventory. When you save, a new PDF is made, the SharePoint lists are updated and everyone on the original email gets the updated report with a list of what changed.</p>
+<div class="changes" id="reviewChanges"></div><label>Your review notes (optional, go on the PDF and in the email)<textarea id="reviewNotes" rows="2" placeholder="e.g. Measured on site, kitchen reseal not needed"></textarea></label>`;
+ $('reviewNotes').addEventListener('input',save);paintChanges()}
+async function startReview(){document.title='Review · Void Pre-Inspection';$('heroSub').textContent='Surveyor review';$('heroText').textContent='Check the pre-inspection, change what needs changing and save. Saving creates an updated PDF, updates SharePoint and emails the officer and everyone on the original email.';
+ $('submit').textContent='Save review and update PDF';$('reset').hidden=true;$('ccWrap').hidden=true;$('openRev').hidden=true;say('');
+ let res,body={};try{res=await fetch('/api/review?ref='+encodeURIComponent(REVIEW_REF),{cache:'no-store',credentials:'same-origin'});body=await res.json().catch(()=>({}))}catch{return reviewFail('Could not open the pre-inspection','Check your connection and reload the page.')}
+ if(res.status===401)return reviewFail('Please sign in again','Reload the page to sign in, then open the link again.');
+ if(!res.ok)return reviewFail(res.status===403?'Surveyors only':res.status===404?'Pre-inspection not found':'Could not open the pre-inspection',body.error||`The server said ${res.status}.`);
+ const rec=body.record;REVIEW={record:rec,reviewer:body.reviewer,original:rec.form};S=fromRecord(JSON.parse(JSON.stringify(rec.form)));paintFields();renderRooms();paintReview();
+ const d=await Drafts.get();saveReady=true;
+ if(d&&d.baseRevision===rec.revision&&started(d)){$('restoreWhat').textContent=`Unsaved changes to this review, last saved ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').querySelector('b').textContent='Unsaved review changes found on this device.';$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true;say('')};$('restoreNo').onclick=()=>{clearTimeout(saveT);Drafts.del();$('restore').hidden=true;$('saved').textContent=''}}
+ else if(d)Drafts.del()}
+async function doReviewSave(){if(busy||!valid())return;busy=true;const btn=$('submit');btn.disabled=true;say('');
+ const rev=nextRev(),mark=stepUi([`Create the updated PDF (review ${rev})`,'Save it to SharePoint, update the lists and email it','Download a copy to this device']);
+ try{
+  mark(0,'run');const pdf=await makePdf(PDF_LIMIT);if(pdf.bytes.byteLength>PDF_LIMIT){mark(0,'fail','The report is too large. Remove some photos and save again.');say('The report is too large to send.','err');return}
+  mark(0,'done',`Updated PDF created (${Math.round(pdf.bytes.byteLength/1024)} KB)`);const name=fileBase()+'.pdf';
+  mark(1,'run');let res,body={};
+  try{res=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({reference:REVIEW.record.reference,baseRevision:REVIEW.record.revision,notes:$('reviewNotes').value,form:payload(),pdfBase64:b64(pdf.bytes)})});body=await res.json().catch(()=>({}))}
+  catch{mark(1,'fail','Could not reach the server. Check your connection and save again.');say('Not saved. Your changes are still here.','err');return}
+  if(res.status===401){mark(1,'fail','Your sign-in has expired. Reload the page to sign in again, then save.');say('Not saved. Your changes are kept on this device.','err');return}
+  if(!res.ok){mark(1,'fail',esc(body.error||`The server refused the review (${res.status}).`));say('Not saved. Your changes are still here.','err');return}
+  const n=(body.changes||[]).length;mark(1,'done',`Review ${body.revision} saved and emailed${n?` with ${n} change${n===1?'':'s'}`:', no changes'}.`);
+  mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
+  REVIEW.record={...REVIEW.record,revision:body.revision,history:[...(REVIEW.record.history||[]),{revision:body.revision,at:new Date().toISOString(),by:REVIEW.reviewer,changes:body.changes||[]}]};REVIEW.original=JSON.parse(JSON.stringify(liveForm()));
+  clearTimeout(saveT);Drafts.del();$('saved').textContent='';paintReview();
+  say(`Review ${body.revision} of ${REVIEW.record.reference} saved. The updated PDF is in SharePoint and in your inbox. You can carry on and save another review if needed.`,'ok')
+ }catch(e){say('Could not create the report: '+(e.message||e),'err')}
+ finally{busy=false;btn.disabled=false}}
+$('openRev').addEventListener('submit',e=>{e.preventDefault();const r=$('openRef').value.trim().toUpperCase();if(!/^VPI-\d{8}-[0-9A-F]{4}$/.test(r)){$('openRef').focus();$('openRef').setCustomValidity('Enter a reference like VPI-20261103-D632');$('openRef').reportValidity();return}location.href='?review='+encodeURIComponent(r)});
+$('openRef').addEventListener('input',e=>e.target.setCustomValidity(''));
 $('pdfOnly').onclick=async()=>{if(busy)return;busy=true;say('Creating the PDF…');try{const {bytes}=await makePdf(5e7);offerDownload(bytes,fileBase()+'.pdf',i=>say(i.html,i.state==='fail'?'err':'ok'))}catch(e){say('Could not create the PDF: '+(e.message||e),'err')}finally{busy=false}};
 
 // ---- Start: load the SOR book, property list and logo, then draw the form ----
@@ -428,7 +487,7 @@ const toDataUrl=blob=>new Promise((ok,no)=>{const f=new FileReader();f.onload=()
   LOGO=await toDataUrl(await lr.blob());
   {const im=new Image();im.src=LOGO;await im.decode().catch(()=>{});if(im.naturalWidth)LOGO_R=im.naturalHeight/im.naturalWidth}
  }catch(e){say('The form could not load its data ('+(e.message||e)+'). Reload the page.','err');return}
- paintFields();renderRooms();const d=await Drafts.get();saveReady=true;if(started(d)){const n=d.rooms.reduce((k,r)=>k+(r.photos?.length||0),0);$('restoreWhat').textContent=`${(d.address||'No address').split(/\n|,/)[0]} · ${n} photo${n===1?'':'s'} · last saved ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true;say('')};$('restoreNo').onclick=()=>{if(!confirm('Discard the unsent pre-inspection saved on this device?'))return;clearTimeout(saveT);Drafts.del();$('restore').hidden=true;$('saved').textContent=''}}
+ paintFields();renderRooms();if(REVIEW_REF)return startReview();const d=await Drafts.get();saveReady=true;if(started(d)){const n=d.rooms.reduce((k,r)=>k+(r.photos?.length||0),0);$('restoreWhat').textContent=`${(d.address||'No address').split(/\n|,/)[0]} · ${n} photo${n===1?'':'s'} · last saved ${new Date(d.savedAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}.`;$('restore').hidden=false;$('restoreYes').onclick=()=>{load(d);$('restore').hidden=true;say('')};$('restoreNo').onclick=()=>{if(!confirm('Discard the unsent pre-inspection saved on this device?'))return;clearTimeout(saveT);Drafts.del();$('restore').hidden=true;$('saved').textContent=''}}
 })();
 </script>
 </body></html>

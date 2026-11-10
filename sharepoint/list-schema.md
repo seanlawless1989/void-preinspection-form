@@ -4,7 +4,9 @@ Create these on the SharePoint site that will hold the records (for example the 
 
 ## Library: Void Pre-Inspection Records
 
-A document library. Each submission adds one PDF named `VPI-yyyymmdd-XXXX - <address> - Void Pre-Inspection - dd-mm-yyyy.pdf`. No extra columns needed.
+A document library. Each submission adds one PDF named `VPI-yyyymmdd-XXXX - <address> - Void Pre-Inspection - dd-mm-yyyy.pdf`. Each surveyor review adds another, ending ` - Review 1.pdf`, ` - Review 2.pdf` and so on; the original stays. No extra columns needed.
+
+Create a folder called **Data** in the library. Each submission saves its whole form there as `VPI-yyyymmdd-XXXX.json` (photos included), which is what the surveyor review page opens. Don't edit or move these files; a review replaces the file, and SharePoint's version history keeps the earlier ones.
 
 ## List: Void Pre-Inspections
 
@@ -42,7 +44,16 @@ One row per submitted pre-inspection. Title holds the reference (`VPI-20261015-D
 | SubmittedBy | Single line | From the Microsoft sign-in |
 | SubmittedByEmail | Single line | |
 | SubmissionId | Single line | |
-| RecordLink | Hyperlink | Link to the PDF, set by the flow |
+| RecordLink | Hyperlink | Link to the PDF, set by the flow. After a surveyor review it points at the latest PDF |
+| ReviewStatus | Single line | Blank until reviewed, then "Reviewed by surveyor". Give it the default value "Awaiting review" if you want to filter the ones still to do |
+| Revision | Number (0 decimals) | Review number, 1 for the first review |
+| ReviewedBy | Single line | Surveyor's name, from their Microsoft sign-in |
+| ReviewedByEmail | Single line | |
+| ReviewedAt | Date and time | |
+| ReviewNotes | Multiple lines (plain) | Surveyor's notes |
+| ReviewChanges | Multiple lines (plain) | What the surveyor changed, one change per line |
+
+The review columns are only written by the review flow, so the submit flow works with or without them.
 
 ## List: Void Pre-Inspection Works
 
@@ -79,5 +90,8 @@ One row per inventory item, only when the optional inventory is completed. Title
 | ClearanceInstructions | Multiple lines (plain) |
 
 ## Permissions
+
+Surveyors don't need access to the lists or library either: the review flows read and write as their owner.
+
 
 Break inheritance on all three lists and the library and give access to the owners plus whoever reviews voids (for example the Supported Housing team managers and the voids team). Staff using the form do not need access to these lists: the flow writes as its owner, and they get their copy by email. The flow owner needs Edit on all four.
