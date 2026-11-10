@@ -155,5 +155,54 @@
     return [head].concat(rs.length ? rs.map(r => '\n' + roomSorText(r, cat)) : ['\nNo repairs ticked yet.']).join('\n');
   }
 
-  return { OFFICERS, YN, CHOICES, REDEC_SORS, redecSorLabel, redecChoice, ITEMS, DEFAULT_ROOMS, INVENTORY, INV_ACTS, invActText, invRows, invHasContent, inventoryText, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText };
+
+  // What a surveyor changed between two versions of a pre-inspection, as plain sentences for the
+  // PDF, the email and the SharePoint list. Rooms are matched by id (then name), SOR lines by code.
+  const REVIEW_FIELDS = [['officerName', 'Completed by'], ['date', 'Date of inspection'], ['address', 'Address'], ['propRef', 'Property reference'], ['propType', 'Property type'], ['duration', 'Void duration'], ['keysafe', 'Keysafe number'], ['access', 'Access instructions'], ...YN, ['redecText', 'Redecoration'], ['colourText', 'Colour'], ['hs', 'H&S issues'], ['notes', 'Notes / appointments'], ['external', 'External works']];
+  const clip = (v, n = 70) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim(); return t ? (t.length > n ? `"${t.slice(0, n - 1)}…"` : `"${t}"`) : 'blank'; };
+  function changes(prev, next, cat) {
+    const out = [];
+    if (!prev || !next) return out;
+    const head = f => ({ ...f, officerName: officerName(f), redecText: f.redec ? redecChoice(f) : '', colourText: f.colour ? choice(f, 'colour', 'colourOther') : '' });
+    const a = head(prev), b = head(next);
+    for (const [k, l] of REVIEW_FIELDS) if (String(a[k] ?? '').trim() !== String(b[k] ?? '').trim()) out.push(`${l}: ${clip(a[k])} → ${clip(b[k])}`);
+    if (!!a.noWorks !== !!b.noWorks) out.push(b.noWorks ? 'Marked as no repairs needed (close the void)' : 'No longer marked as no repairs needed');
+    const key = l => l.code + '|' + (l.extra ? 'x' : l.label);
+    const pr = prev.rooms || [], nr = next.rooms || [];
+    const match = r => pr.find(x => r.id && x.id === r.id) || pr.find(x => x.name === r.name && x.type === r.type);
+    const seen = new Set();
+    for (const r of nr) {
+      const o = match(r);
+      const nl = lines(r, cat);
+      if (!o) { out.push(`Room added: ${r.name}${nl.length ? ` (${nl.map(l => `${l.code} x ${qtyText(l)}`).join(', ')})` : ''}`); continue; }
+      seen.add(o);
+      if (o.name !== r.name) out.push(`Room renamed: ${o.name} → ${r.name}`);
+      const ol = lines(o, cat), om = new Map(ol.map(l => [key(l), l])), nm = new Map(nl.map(l => [key(l), l]));
+      for (const l of nl) {
+        const x = om.get(key(l));
+        if (!x) out.push(`${r.name}: added ${l.code} ${l.label} x ${qtyText(l)}${l.where ? ` (${l.where})` : ''}`);
+        else {
+          if (String(x.qty).trim() !== String(l.qty).trim()) out.push(`${r.name}: ${l.code} ${l.label} quantity ${qtyText(x)} → ${qtyText(l)}`);
+          if (String(x.where || '').trim() !== String(l.where || '').trim()) out.push(`${r.name}: ${l.code} where ${clip(x.where, 40)} → ${clip(l.where, 40)}`);
+        }
+      }
+      for (const l of ol) if (!nm.has(key(l))) out.push(`${r.name}: removed ${l.code} ${l.label}`);
+      if (String(o.notes || '').trim() !== String(r.notes || '').trim()) out.push(`${r.name} notes: ${clip(o.notes)} → ${clip(r.notes)}`);
+      const op = photoCount(o), np = photoCount(r);
+      if (np > op) out.push(`${r.name}: ${np - op} photo${np - op === 1 ? '' : 's'} added`);
+      if (np < op) out.push(`${r.name}: ${op - np} photo${op - np === 1 ? '' : 's'} removed`);
+    }
+    for (const o of pr) if (!seen.has(o)) out.push(`Room removed: ${o.name}${lines(o, cat).length ? ` (and its ${lines(o, cat).length} repair${lines(o, cat).length === 1 ? '' : 's'})` : ''}`);
+    const ir = f => new Map(invRows(f.inventory || f.inv).map(r => [r.room + '|' + r.item, r]));
+    const ia = ir(prev), ib = ir(next);
+    for (const [k, r] of ib) { const o = ia.get(k); if (!o) out.push(`Inventory, ${r.room}: added ${r.item} (${invActText(r) || 'no decision'})`); else if (invActText(o) !== invActText(r)) out.push(`Inventory, ${r.room}: ${r.item} ${invActText(o) || 'no decision'} → ${invActText(r) || 'no decision'}`); }
+    for (const [k, r] of ia) if (!ib.has(k)) out.push(`Inventory, ${r.room}: removed ${r.item}`);
+    const iva = prev.inventory || prev.inv || {}, ivb = next.inventory || next.inv || {};
+    if (!!iva.on !== !!ivb.on) out.push(ivb.on ? 'Inventory added' : 'Inventory removed');
+    for (const [k, l] of [['access', 'Inventory access instructions'], ['clearance', 'Inventory clearance instructions']]) if (String(iva[k] || '').trim() !== String(ivb[k] || '').trim()) out.push(`${l}: ${clip(iva[k])} → ${clip(ivb[k])}`);
+    return out;
+  }
+  const photoCount = r => Array.isArray(r.photos) ? r.photos.length : (Number(r.photoCount) || 0);
+
+  return { OFFICERS, YN, CHOICES, REDEC_SORS, redecSorLabel, redecChoice, ITEMS, DEFAULT_ROOMS, INVENTORY, INV_ACTS, invActText, invRows, invHasContent, inventoryText, catalogue, unitOf, lineValue, qtyText, ukDate, addr1, choice, officerName, officerEmail, lines, roomSorText, sorText, changes, photoCount };
 });

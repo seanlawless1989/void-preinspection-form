@@ -8,6 +8,11 @@ const CAT = VPI.catalogue(require('../../shared/sors.json'));
 const SURVEYORS = require('../../shared/surveyors.json');
 
 const MAX_PDF_BYTES = 6e6;
+// Photos are kept with the record (shared/README: "Surveyor review") so a surveyor can open the
+// form again with everything on it. Same limit as the form: 12 photos, already shrunk on the device.
+const MAX_PHOTOS = 12, MAX_PHOTO_CHARS = 2e6;
+const PHOTO_RE = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
+const REF_RE = /^VPI-\d{8}-[0-9A-F]{4}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -88,8 +93,10 @@ function clean(f) {
       if (!s) fail(`${str(r.name, 60)}: SOR ${str(e?.code, 20)} is not in the NHF8 book.`);
       return { id: s.id, code: s.code, qty: str(e.qty, 12) };
     });
-    return { name: str(r.name, 80).trim() || 'Room', type: r.type, ticks, extra, notes: str(r.notes), photoCount: Math.max(0, Math.min(99, Number(r.photoCount) || 0)) };
+    const photos = Array.isArray(r.photos) ? r.photos.filter(p => typeof p === 'string' && p.length <= MAX_PHOTO_CHARS && PHOTO_RE.test(p)) : null;
+    return { id: str(r.id, 40), name: str(r.name, 80).trim() || 'Room', type: r.type, ticks, extra, notes: str(r.notes), photos: photos || [], photoCount: photos ? photos.length : Math.max(0, Math.min(99, Number(r.photoCount) || 0)) };
   });
+  if (o.rooms.reduce((n, r) => n + r.photos.length, 0) > MAX_PHOTOS) fail(`Up to ${MAX_PHOTOS} photos per pre-inspection.`);
   return o;
 }
 
@@ -132,7 +139,7 @@ function inventoryHtml(f) {
   return `<h3 style="color:#005291">Inventory</h3>${block || '<p>No items recorded.</p>'}${f.inventory.access ? `<p><b>Access instructions:</b> ${esc(f.inventory.access)}</p>` : ''}${f.inventory.clearance ? `<p><b>Clearance instructions:</b> ${esc(f.inventory.clearance)}</p>` : ''}`;
 }
 
-function emailHtml(f, ref, works, total, by, surveyor) {
+function emailHtml(f, ref, works, total, by, surveyor, reviewUrl) {
   const row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;vertical-align:top"><b>${esc(k)}</b></td><td style="padding:4px 0">${esc(v)}</td></tr>`;
   return `<div style="font-family:Arial,sans-serif;color:#06122b">
 <h2 style="color:#005291">Void pre-inspection: ${esc(VPI.addr1(f.address))}</h2>
@@ -141,8 +148,10 @@ ${f.noWorks ? '<p style="background:#fff8db;padding:8px 12px"><b>No repairs need
 <table>${row('Completed by', VPI.officerName(f))}${row('Date', VPI.ukDate(f.date))}${row('Address', f.address.replace(/\s*\n\s*/g, ', '))}${row('Property reference', f.propRef || '—')}${row('Property type', f.propType || '—')}${row('Property surveyor', surveyor.fallback ? `Not found in HMS, copied to the ${surveyor.name}` : surveyor.name)}${f.stockRecord ? row('Stock record', f.stockRecord) : ''}${row('Void duration', f.duration || '—')}${row('Keysafe number', f.keysafe || '—')}${row('Access', f.access || '—')}${VPI.YN.map(([k, l]) => row(l, f[k])).join('')}${row('Redecoration', VPI.redecChoice(f))}${row('Colour', VPI.choice(f, 'colour', 'colourOther'))}${row('H&S issues', f.hs || 'None recorded')}${row('Notes / appointments', f.notes || '—')}${row('External works', f.external || '—')}</table>
 <h3 style="color:#005291">SOR codes by room (copy and paste)</h3>
 <pre style="background:#e9f8f5;padding:12px;font-size:13px">${esc(VPI.sorText(f, CAT))}</pre>
-${inventoryHtml(f)}</div>`;
+${inventoryHtml(f)}${reviewUrl ? reviewButton(reviewUrl, 'Surveyor: review or change this pre-inspection') : ''}</div>`;
 }
+
+const reviewButton = (url, text) => `<p style="margin:20px 0 4px"><a href="${esc(url)}" style="display:inline-block;background:#005291;color:#ffffff;padding:10px 18px;border-radius:999px;font-weight:bold;text-decoration:none">${esc(text)}</a></p><p style="color:#46566b;font-size:12px;margin:0">Opens the form with everything filled in. Changes create an updated PDF and update SharePoint.</p>`;
 
 // Returns { status, body }. postToFlow(json) must resolve to { ok, status, text }.
 async function handleSubmit({ headers, body }, { postToFlow, now = () => new Date() }) {
@@ -164,24 +173,14 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
 
   const submittedAt = now().toISOString();
   const ref = reference(f, submittedAt);
-  const works = [];
-  for (const r of f.rooms) for (const l of VPI.lines(r, CAT)) {
-    const q = Number(l.qty);
-    works.push({ Title: ref, Room: r.name, SORCode: l.code, Repair: l.label, SORDescription: l.description, Where: l.where, UOM: l.uom, Quantity: q, Rate: l.rate, LineValue: VPI.lineValue({ rate: l.rate, qty: q }), AddedFromBook: !!l.extra });
-  }
-  if (f.noWorks) works.length = 0;
-  const inventoryItems = VPI.invRows(f.inventory).map(r => ({
-    Title: ref, Room: r.room, Item: r.item, Decision: r.act === 'stay' ? 'Stay' : r.act === 'remove' ? 'Remove' : '', Clean: r.clean,
-    Address: f.address.replace(/\s*\n\s*/g, ', '), PropertyRef: f.propRef, AccessInstructions: f.inventory.access, ClearanceInstructions: f.inventory.clearance,
-  }));
-  const total = Math.round(works.reduce((a, w) => a + w.LineValue, 0) * 100) / 100;
+  const { works, inventoryItems, total, sharepointItem } = buildRows(f, ref, submittedAt, user);
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
   const surveyor = surveyorFor(f.propRef);
   const monitor = submittedAt < MONITOR_CC.until ? MONITOR_CC.email : '';
-  const cc = [officerEmail, surveyor.email, monitor, ...f.cc.split(/[,;\s]+/)].map(x => String(x || '').trim())
-    .filter((x, i, a) => EMAIL_RE.test(x) && x.toLowerCase() !== user.email.toLowerCase() && a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i)
-    .slice(0, 10);
+  const cc = ccList([officerEmail, surveyor.email, monitor, ...f.cc.split(/[,;\s]+/)], user.email);
+  const reviewUrl = reviewLink(headers || {}, ref);
+  const record = { schema: 1, reference: ref, revision: 0, status: 'Submitted', submittedAt, submittedBy: user, form: f, history: [] };
 
   const payload = {
     reference: ref,
@@ -198,42 +197,20 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     worksValue: total,
     recordFileName: `${ref} - ${safeName(addr || 'Property').slice(0, 60)} - Void Pre-Inspection - ${VPI.ukDate(f.date).replace(/\//g, '-')}.pdf`,
     pdfBase64: body.pdfBase64,
-    sharepointItem: {
-      Title: ref,
-      SubmittedAt: submittedAt,
-      InspectionDate: f.date,
-      Officer: VPI.officerName(f),
-      OfficerEmail: officerEmail,
-      Address: f.address.replace(/\s*\n\s*/g, ', '),
-      PropertyRef: f.propRef,
-      PropertyType: f.propType,
-      StockRecord: f.stockRecord,
-      VoidDuration: f.duration,
-      Keysafe: f.keysafe,
-      Access: f.access,
-      GasCap: f.gasCap, EPCRequired: f.epc, UtilitiesSwap: f.utilities, ElectricOn: f.elec, WhiteGoodsPAT: f.pat,
-      Redecoration: VPI.redecChoice(f),
-      Colour: f.colour ? VPI.choice(f, 'colour', 'colourOther') : '',
-      HSIssues: f.hs,
-      Notes: f.notes,
-      ExternalWorks: f.external,
-      NoWorks: f.noWorks,
-      SORText: VPI.sorText(f, CAT),
-      WorksCount: works.length,
-      WorksValue: total,
-      PhotoCount: f.rooms.reduce((n, r) => n + r.photoCount, 0),
-      SubmittedBy: user.name,
-      SubmittedByEmail: user.email,
-      SubmissionId: f.id || ref,
-    },
+    sharepointItem,
     worksItems: works,
     inventoryItems,
     hasInventory: f.inventory.on,
     inventoryText: VPI.inventoryText(f),
+    // The whole form, photos included, for the surveyor review page. The flow saves it as
+    // Data/<reference>.json in the records library (flow/README.md, step 2b).
+    dataFileName: `${ref}.json`,
+    recordJson: JSON.stringify(record),
+    reviewUrl,
     emailTo: user.email,
     emailCc: cc.join(';'),
     emailSubject: `Void pre-inspection${f.noWorks ? ' (NO WORKS – close void)' : ''} – ${addr} – ${VPI.ukDate(f.date)} – ${ref}`,
-    emailHtml: emailHtml(f, ref, works, total, user, surveyor),
+    emailHtml: emailHtml(f, ref, works, total, user, surveyor, reviewUrl),
   };
 
   const res = await postToFlow(payload);
@@ -241,4 +218,64 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   return { status: 200, body: { reference: ref, worksCount: works.length, worksValue: total } };
 }
 
-module.exports = { handleSubmit, principal, surveyorFor, MAX_PDF_BYTES };
+// Up to ten distinct, valid addresses, leaving out the person the email is sent to.
+function ccList(list, toEmail) {
+  return list.map(x => String(x || '').trim())
+    .filter((x, i, a) => EMAIL_RE.test(x) && x.toLowerCase() !== String(toEmail || '').toLowerCase() && a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i)
+    .slice(0, 10);
+}
+
+// The address of this site, for the "review and edit" link. SITE_URL wins when it is set.
+function siteUrl(headers) {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, '');
+  try { if (headers['x-ms-original-url']) return new URL(headers['x-ms-original-url']).origin; } catch { /* fall through */ }
+  const host = headers['x-forwarded-host'] || headers.host;
+  return host ? `https://${String(host).split(',')[0].trim()}` : '';
+}
+const reviewLink = (headers, ref) => { const u = siteUrl(headers); return u ? `${u}/?review=${encodeURIComponent(ref)}` : ''; };
+
+// The list rows for one version of a pre-inspection: the main row, one per SOR and one per inventory item.
+function buildRows(f, ref, submittedAt, user) {
+  const works = [];
+  for (const r of f.rooms) for (const l of VPI.lines(r, CAT)) {
+    const q = Number(l.qty);
+    works.push({ Title: ref, Room: r.name, SORCode: l.code, Repair: l.label, SORDescription: l.description, Where: l.where, UOM: l.uom, Quantity: q, Rate: l.rate, LineValue: VPI.lineValue({ rate: l.rate, qty: q }), AddedFromBook: !!l.extra });
+  }
+  if (f.noWorks) works.length = 0;
+  const inventoryItems = VPI.invRows(f.inventory).map(r => ({
+    Title: ref, Room: r.room, Item: r.item, Decision: r.act === 'stay' ? 'Stay' : r.act === 'remove' ? 'Remove' : '', Clean: r.clean,
+    Address: f.address.replace(/\s*\n\s*/g, ', '), PropertyRef: f.propRef, AccessInstructions: f.inventory.access, ClearanceInstructions: f.inventory.clearance,
+  }));
+  const total = Math.round(works.reduce((a, w) => a + w.LineValue, 0) * 100) / 100;
+  const sharepointItem = {
+    Title: ref,
+    SubmittedAt: submittedAt,
+    InspectionDate: f.date,
+    Officer: VPI.officerName(f),
+    OfficerEmail: VPI.officerEmail(f),
+    Address: f.address.replace(/\s*\n\s*/g, ', '),
+    PropertyRef: f.propRef,
+    PropertyType: f.propType,
+    StockRecord: f.stockRecord,
+    VoidDuration: f.duration,
+    Keysafe: f.keysafe,
+    Access: f.access,
+    GasCap: f.gasCap, EPCRequired: f.epc, UtilitiesSwap: f.utilities, ElectricOn: f.elec, WhiteGoodsPAT: f.pat,
+    Redecoration: VPI.redecChoice(f),
+    Colour: f.colour ? VPI.choice(f, 'colour', 'colourOther') : '',
+    HSIssues: f.hs,
+    Notes: f.notes,
+    ExternalWorks: f.external,
+    NoWorks: f.noWorks,
+    SORText: VPI.sorText(f, CAT),
+    WorksCount: works.length,
+    WorksValue: total,
+    PhotoCount: f.rooms.reduce((n, r) => n + r.photoCount, 0),
+    SubmittedBy: user.name,
+    SubmittedByEmail: user.email,
+    SubmissionId: f.id || ref,
+  };
+  return { works, inventoryItems, total, sharepointItem };
+}
+
+module.exports = { handleSubmit, principal, surveyorFor, clean, validate, buildRows, ccList, siteUrl, reviewLink, reviewButton, inventoryHtml, InputError, fail, esc, money, safeName, str, CAT, MONITOR_CC, MAX_PDF_BYTES, REF_RE, EMAIL_RE };

@@ -5,7 +5,10 @@ North Star's Supported Housing void pre-inspection, built from Laurie Edmondson'
 * creates a branded PDF report in the browser (photos included) and downloads a copy;
 * saves the PDF to the **Void Pre-Inspection Records** SharePoint library;
 * adds a row to the **Void Pre-Inspections** list, one row per SOR to **Void Pre-Inspection Works** and, if an inventory was completed, one row per item to **Void Pre-Inspection Inventory**;
-* emails the person who submitted it, CC the supported officer and the property's surveyor in HMS, with the PDF attached and the SOR codes by room ready to paste into HMS.
+* emails the person who submitted it, CC the supported officer and the property's surveyor in HMS, with the PDF attached and the SOR codes by room ready to paste into HMS;
+* saves the whole form (photos included) so a surveyor can open it again with the **Surveyor: review or change this pre-inspection** button in that email.
+
+**Surveyor review.** The surveyor opens `/?review=<reference>` (from the email button, or by typing the reference into the box at the bottom of the form), sees the form exactly as submitted, changes whatever needs changing (repairs, quantities, SORs, notes, photos, inventory) and saves. A live list shows what they've changed. Saving creates an updated PDF with a "Surveyor review" section at the top (who, when, what changed, their notes), saves it next to the original, updates the SharePoint rows and emails everyone on the original email. They can review again later; each save is review 1, 2, 3. Only surveyors can open the review page (see `api/src/lib/handleReview.js` and the `REVIEWERS` setting). Set-up is in `flow/README.md` under "Surveyor review flows".
 
 It follows the same pattern as the Awaab's Law and Property Services inspection forms: Azure Static Web App with Entra sign-in, one Azure Function, and a Power Automate flow.
 
@@ -56,8 +59,8 @@ npm run dev     # http://localhost:4280, signed in as a fake user; submissions g
 3. **Entra app registration.** Register an app (single tenant, North Star). Add the web redirect URI `https://<your-app>.azurestaticapps.net/.auth/login/aad/callback` and tick ID tokens. Create a client secret.
 4. **SharePoint.** Create the library and the two lists in `sharepoint/list-schema.md` on the site you choose, and set their permissions.
 5. **Flow.** Build it from `flow/README.md`, save, and copy its HTTP POST URL.
-6. **App settings.** In the Static Web App → Environment variables add `AAD_CLIENT_ID`, `AAD_CLIENT_SECRET` and `FLOW_URL`.
-7. **Restrict who can use it (optional).** In Entra → Enterprise applications → this app, set "Assignment required" to Yes and assign the Supported Housing group.
+6. **App settings.** In the Static Web App → Environment variables add `AAD_CLIENT_ID`, `AAD_CLIENT_SECRET` and `FLOW_URL`, plus `REVIEW_LOAD_URL` and `REVIEW_SAVE_URL` for surveyor review. Optional: `REVIEWERS` (extra people allowed to review, comma separated, or `*` for everyone signed in) and `SITE_URL` (the address used in the email's review link).
+7. **Restrict who can use it (optional).** In Entra → Enterprise applications → this app, set "Assignment required" to Yes and assign the Supported Housing group. Assign the Property Services surveyors too, or they can't open the review link.
 8. **Test.** Sign in, submit a test pre-inspection for a real property and check the PDF, both lists and the email. Delete the test rows.
 
 ## Go-live checklist
@@ -66,6 +69,7 @@ npm run dev     # http://localhost:4280, signed in as a fake user; submissions g
 - [ ] A test submission lands in the library, both lists and the inbox, with the officer CC'd
 - [ ] A "No repairs needed" submission arrives with "NO WORKS – close void" in the subject
 - [ ] The SOR text pastes cleanly into HMS
+- [ ] A surveyor can open the review link from the email, change a quantity, save, and the updated PDF, list rows and email all show the change
 - [ ] Laurie and the team managers have access to the lists
 - [ ] The link is shared with the Supported Housing staff (it works on phones)
 

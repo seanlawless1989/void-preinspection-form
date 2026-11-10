@@ -3,6 +3,8 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
-    "FLOW_URL": "paste the flow's HTTP POST URL here (never commit the real one)"
+    "FLOW_URL": "paste the flow's HTTP POST URL here (never commit the real one)",
+    "REVIEW_LOAD_URL": "the review load flow's HTTP POST URL",
+    "REVIEW_SAVE_URL": "the review save flow's HTTP POST URL"
   }
 }
