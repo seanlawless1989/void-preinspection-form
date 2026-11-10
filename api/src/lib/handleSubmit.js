@@ -17,7 +17,9 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const str = (v, max = 2000) => String(v ?? '').slice(0, max);
-const safeName = s => String(s).replace(/[\\/:*?"<>|#%~&{}]+/g, ' ').replace(/\s+/g, ' ').trim();
+// Commas, semicolons, apostrophes and the usual Windows-awkward characters are taken out: Outlook can refuse to copy or drag an
+// attachment whose name has a comma (Norton Road, Nov 2026).
+const safeName = s => String(s).replace(/['’]/g, '').replace(/[\\/:*?"<>|#%~&{},;]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 // The property's surveyor in HMS (shared/surveyors.json, built from an HMS export). When the
 // property or its surveyor isn't known, the Property Services team mailbox gets the copy instead.
