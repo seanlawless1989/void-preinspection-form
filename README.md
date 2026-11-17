@@ -10,6 +10,8 @@ North Star's Supported Housing void pre-inspection, built from Laurie Edmondson'
 
 **Surveyor review.** The surveyor opens `/?review=<reference>` (from the email button, or by typing the reference into the box at the bottom of the form), sees the form exactly as submitted, changes whatever needs changing (repairs, quantities, SORs, notes, photos, inventory) and saves. A live list shows what they've changed. Saving creates an updated PDF with a "Surveyor review" section at the top (who, when, what changed, their notes), saves it next to the original, updates the SharePoint rows and emails everyone on the original email. They can review again later; each save is review 1, 2, 3. Only surveyors can open the review page (see `api/src/lib/handleReview.js` and the `REVIEWERS` setting). Set-up is in `flow/README.md` under "Surveyor review flows".
 
+**When saving fails.** The form tries again by itself up to three times (5, 15 and 30 seconds apart) with the same reference, and the function checks SharePoint first so a slow-but-successful try is never saved or emailed twice. If it still fails, the person sees a short code to send Sean (for example `flow-502 · VPI-20261117-4996 · 15:57`) and their entries stay on the device. Every attempt is logged by the function as one `submit:` line (reference, try number, flow status, how long the flow took and the flow's error), which shows in Application Insights under traces.
+
 It follows the same pattern as the Awaab's Law and Property Services inspection forms: Azure Static Web App with Entra sign-in, one Azure Function, and a Power Automate flow.
 
 ## How it fits together

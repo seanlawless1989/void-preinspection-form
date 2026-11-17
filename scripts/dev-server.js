@@ -3,6 +3,8 @@
 // It also mocks the two surveyor review flows: records live in dev-submissions/data/<ref>.json.
 // Open http://localhost:4280/?review=<reference> after submitting one. Everyone counts as a
 // surveyor locally unless REVIEWERS is set.
+// To try the automatic retries: DEV_FLOW_FAIL=2 makes the mock flow fail the next 2 submissions
+// (502); DEV_FLOW_LATE=1 makes the next one save everything but answer as if it timed out (504).
 // Set FLOW_URL to send to a real flow instead.  Usage: npm run dev  →  http://localhost:4280
 const http = require('http'), fs = require('fs'), path = require('path');
 const { handleSubmit } = require('../api/src/lib/handleSubmit');
@@ -15,7 +17,9 @@ const PORT = Number(process.env.PORT) || 4280;
 const USER = { identityProvider: 'aad', userId: 'dev', userDetails: process.env.DEV_EMAIL || 'dev.user@northstarhg.co.uk', userRoles: ['anonymous', 'authenticated'], claims: [{ typ: 'name', val: process.env.DEV_NAME || 'Dev User' }] };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.css': 'text/css' };
 
+let failNext = Number(process.env.DEV_FLOW_FAIL) || 0, lateNext = Number(process.env.DEV_FLOW_LATE) || 0;
 async function postToFlow(p) {
+  if (!p.revision && failNext > 0) { failNext--; console.log('Mock flow: failing on purpose', p.reference); return { ok: false, status: 502, text: JSON.stringify({ error: { code: 'ActionFailed', message: 'Mock failure (DEV_FLOW_FAIL)' } }) }; }
   if (process.env.FLOW_URL) {
     const r = await fetch(process.env.FLOW_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
     return { ok: r.ok, status: r.status, text: await r.text() };
@@ -28,6 +32,7 @@ async function postToFlow(p) {
   fs.writeFileSync(path.join(out, p.recordFileName), Buffer.from(p.pdfBase64, 'base64'));
   fs.writeFileSync(path.join(out, p.reference + tag + '-email.html'), `<p>To: ${p.emailTo}<br>Cc: ${p.emailCc}<br>Subject: ${p.emailSubject}</p>` + p.emailHtml);
   console.log('Mock flow saved', p.reference, '→ dev-submissions/');
+  if (!p.revision && lateNext > 0) { lateNext--; console.log('Mock flow: answering late on purpose'); return { ok: false, status: 504, timedOut: true, text: 'Mock timeout (DEV_FLOW_LATE)' }; }
   return { ok: true, status: 200, text: JSON.stringify({ reference: p.reference }) };
 }
 
@@ -40,7 +45,7 @@ http.createServer(async (req, res) => {
   if (url.pathname === '/api/submit' && req.method === 'POST') {
     const chunks = []; for await (const c of req) chunks.push(c);
     let body = null; try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch {}
-    try { const r = await handleSubmit({ headers: hdrs(req), body }, { postToFlow }); return send(r.status, r.body); }
+    try { const r = await handleSubmit({ headers: hdrs(req), body }, { postToFlow, loadRecord }); if (r.log) console.log('submit:', r.status, JSON.stringify(r.log)); return send(r.status, r.body); }
     catch (e) { console.error(e); return send(500, { error: 'Server error' }); }
   }
   if (url.pathname === '/api/review') {

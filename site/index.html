@@ -413,17 +413,36 @@ async function doSubmit(){if(REVIEW)return doReviewSave();if(busy||!valid())retu
   mark(0,'run');const pdf=await makePdf(PDF_LIMIT);if(pdf.bytes.byteLength>PDF_LIMIT){mark(0,'fail','The report is too large. Remove some photos and submit again.');say('The report is too large to send.','err');return}
   mark(0,'done',`PDF report created (${Math.round(pdf.bytes.byteLength/1024)} KB)`);
   const name=fileBase()+'.pdf';
-  mark(1,'run');
-  let res,body={};
-  try{res=await fetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({form:payload(),pdfBase64:b64(pdf.bytes)})});body=await res.json().catch(()=>({}))}
-  catch{mark(1,'fail','Could not reach the server. Check your connection and submit again.');say('Not submitted. Your entries are still here.','err');return}
-  if(res.status===401||res.status===403){mark(1,'fail','Your sign-in has expired. Reload the page to sign in again, then submit.');say('Not submitted. Your entries are still here.','err');return}
-  if(!res.ok){mark(1,'fail',esc(body.error||`The server refused the report (${res.status}).`));say('Not submitted. Your entries are still here.','err');return}
-  mark(1,'done',`Saved and emailed. Reference <span class="ref">${esc(body.reference)}</span>`);
+  // One key per submission, kept with the draft, so every retry (even after a reload) gets the same reference and can't save it twice.
+  if(!S.submitKey){S.submitKey=Date.now().toString(36)+'-'+uid();await saveNow()}
+  const r=await sendWithRetry('/api/submit',a=>({form:payload(),pdfBase64:b64(pdf.bytes),submitKey:S.submitKey,...a}),t=>mark(1,'run',t));
+  if(!r.ok){mark(1,'fail',r.html);say(r.say,'err');return}
+  const body=r.body;
+  mark(1,'done',`Saved and emailed. Reference <span class="ref">${esc(body.reference)}</span>${body.alreadySaved?' (it had already gone through on an earlier try, so it was not sent twice)':r.tries>1?` (went through on try ${r.tries})`:''}`);
   mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
   say(`Pre-inspection ${body.reference} submitted. The report is in SharePoint and in your inbox. Start the next one with "New pre-inspection".`,'ok');clearTimeout(saveT);Drafts.del();$('saved').textContent=''
  }catch(e){say('Could not create the report: '+(e.message||e),'err')}
  finally{busy=false;btn.disabled=false}}
+// Sends to the server and tries again on its own when SharePoint, the flow or the connection has a
+// moment (17 Nov 2026: two failed tries in a row, then fine). Waits 5s, 15s, then 30s between tries.
+// Wrong answers (400), sign-in (401/403) and too large (413) are not retried. Returns
+// { ok, body, tries } or { ok:false, html, say } with the error code and time, to quote when reporting it.
+const RETRY_WAITS=[5,15,30];
+async function sendWithRetry(url,makeBody,progress){const earlier=[];let last={};
+ for(let i=0;;i++){const t0=Date.now();let res=null,body={},err='';
+  try{res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(makeBody({attempt:i+1,earlierAttempts:earlier}))});body=await res.json().catch(()=>({}))}catch(e){err=String(e&&e.message||e)}
+  if(res&&res.ok&&body.reference)return{ok:true,body,tries:i+1};
+  const status=res?res.status:0;
+  if(status===401||status===403)return{ok:false,html:'Your sign-in has expired. Reload the page to sign in again, then submit. Your entries are saved on this device.',say:'Not submitted. Your entries are still here.'};
+  if(status===400||status===413)return{ok:false,html:esc(body.error||(status===413?'The report is too large. Remove some photos and submit again.':`The server refused the report (${status}).`)),say:'Not submitted. Your entries are still here.'};
+  last={status,error:body.error||'',code:body.code||(status?'http-'+status:'no-connection'),ref:body.reference||last.ref||''};
+  earlier.push({status,ms:Date.now()-t0,error:(body.code||err||'').slice(0,200)});
+  if(i>=RETRY_WAITS.length)break;
+  for(let w=RETRY_WAITS[i];w>0;w--){progress(`${status?'SharePoint did not save it':'Could not reach the server'} on try ${i+1}. Trying again in ${w}s (try ${i+2} of ${RETRY_WAITS.length+1}). Keep this page open.`);await new Promise(z=>setTimeout(z,1000))}
+  progress(`Saving to SharePoint, try ${i+2} of ${RETRY_WAITS.length+1}…`)}
+ const at=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ const why=last.status?esc(last.error||`The server answered ${last.status}.`):'Could not reach the server. Check your connection.';
+ return{ok:false,html:`${why} Tried ${RETRY_WAITS.length+1} times. Your entries are saved on this device: press Submit again in a few minutes and it will carry on with the same reference, without sending it twice.<br><span class="hint">If it keeps happening, send Sean this: ${esc([last.code,last.ref,at].filter(Boolean).join(' · '))}</span>`,say:'Not submitted yet. Your entries are still here.'}}
 function offerDownload(bytes,name,cb){try{const u=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);cb({state:'done',html:'PDF downloaded to this device'})}catch{cb({state:'fail',html:'PDF download not available here'})}}
 $('submit').onclick=doSubmit;
 
