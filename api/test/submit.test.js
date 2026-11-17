@@ -169,3 +169,65 @@ test('a SOR is ignored unless redecoration is Full', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.sent.sharepointItem.Redecoration, 'Part');
 });
+
+// ---- Retries (Laurie, 22 Chapel Street, 17 Nov 2026: the flow failed twice, each try made a new reference) ----
+const call = (body, deps) => handleSubmit({ headers: who(), body }, { now: () => new Date('2026-10-15T10:00:00Z'), ...deps });
+const okFlow = calls => async p => { calls.push(p); return { ok: true, status: 200, text: '{}' }; };
+
+test('a retry with the same submit key gets the same reference', async () => {
+  const sent = [];
+  const a = await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh' }, { postToFlow: okFlow(sent) });
+  const b = await handleSubmit({ headers: who(), body: { form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh', attempt: 2 } }, { postToFlow: okFlow(sent), now: () => new Date('2026-10-15T10:03:00Z') });
+  assert.equal(a.body.reference, b.body.reference);
+  assert.equal(sent[0].recordFileName, sent[1].recordFileName);
+  const c = await call({ form: form(), pdfBase64: PDF, submitKey: 'k2-abcdefgh' }, { postToFlow: okFlow(sent) });
+  assert.notEqual(c.body.reference, a.body.reference);
+});
+
+test('a retry that finds the submission already saved does not send it again', async () => {
+  const sent = [], asked = [];
+  const ref = (await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh' }, { postToFlow: okFlow([]) })).body.reference;
+  const r = await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh', attempt: 2 }, {
+    postToFlow: okFlow(sent),
+    loadRecord: async x => { asked.push(x); return { ok: true, status: 200, text: JSON.stringify({ reference: x }) }; },
+  });
+  assert.equal(r.status, 200); assert.equal(r.body.reference, ref); assert.equal(r.body.alreadySaved, true);
+  assert.deepEqual(asked, [ref]); assert.equal(sent.length, 0);
+});
+
+test('a retry that finds nothing saved (or cannot check) submits as normal', async () => {
+  for (const loadRecord of [async () => ({ ok: false, status: 404 }), async () => ({ ok: false, status: 502 }), async () => { throw new Error('down'); }]) {
+    const sent = [];
+    const r = await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh', attempt: 3 }, { postToFlow: okFlow(sent), loadRecord });
+    assert.equal(r.status, 200); assert.equal(sent.length, 1); assert.equal(r.body.alreadySaved, undefined);
+  }
+});
+
+test('first attempts are never checked against SharePoint', async () => {
+  let asked = 0;
+  await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh' }, { postToFlow: okFlow([]), loadRecord: async () => { asked++; return { ok: true, status: 200, text: '{}' }; } });
+  assert.equal(asked, 0);
+});
+
+test('flow failures come back as retryable, with the reference and what the flow said in the log', async () => {
+  const r = await call({ form: form(), pdfBase64: PDF, submitKey: 'k1-abcdefgh', earlierAttempts: [{ status: 502, ms: 9000, error: 'x' }] }, {
+    postToFlow: async () => ({ ok: false, status: 502, ms: 12000, text: JSON.stringify({ error: { code: 'NoResponse', message: 'The server did not receive a response from an upstream server.' } }) }),
+  });
+  assert.equal(r.status, 502); assert.equal(r.body.retry, true); assert.equal(r.body.code, 'flow-502');
+  assert.match(r.body.error, new RegExp(r.body.reference)); assert.match(r.body.error, /Nothing was lost/);
+  assert.equal(r.log.flowError, 'NoResponse: The server did not receive a response from an upstream server.');
+  assert.equal(r.log.flowMs, 12000); assert.equal(r.log.earlierAttempts.length, 1);
+  assert.equal(r.log.outcome, 'flow failed');
+});
+
+test('a flow that is too slow is reported as a timeout (504), and a thrown error as unreachable', async () => {
+  const slow = await call({ form: form(), pdfBase64: PDF }, { postToFlow: async () => ({ ok: false, status: 504, timedOut: true, text: 'no answer' }) });
+  assert.equal(slow.status, 504); assert.match(slow.body.error, /may still go through/);
+  const down = await call({ form: form(), pdfBase64: PDF }, { postToFlow: async () => { throw new Error('ECONNRESET'); } });
+  assert.equal(down.status, 502); assert.equal(down.body.code, 'flow-unreachable'); assert.equal(down.log.flowError, 'ECONNRESET');
+});
+
+test('a bad submit key is ignored rather than refused', async () => {
+  const r = await call({ form: form(), pdfBase64: PDF, submitKey: '<script>' }, { postToFlow: okFlow([]) });
+  assert.equal(r.status, 200);
+});

@@ -81,6 +81,14 @@ The email goes out from whichever account owns the flow's Outlook connection, so
 
 Add a second **Response** with status `500` after a scope or a "run after has failed" branch if you want failures to show straight away; otherwise the function reports any non-2xx as "could not be saved, submit again".
 
+## Retries and the order of the steps
+
+The form retries a failed submission on its own (after 5, 15 and 30 seconds) with the **same reference**, so a retry overwrites the same PDF instead of making a new one. Before a retry, the function asks the review load flow (Flow A below) whether `Data/<reference>.json` already exists; if it does, the earlier try went through and nothing is sent again.
+
+For that check to mean "everything is done", the data file should be the **last** thing the flow saves. Move step **2b** so it runs after step **7 (email)** and just before **8 (Response)**. With 2b where it was originally (straight after the PDF), a run that saved the data file but then failed on the list rows or the email would be treated as done.
+
+The function waits up to 35 seconds for this flow (Static Web Apps stops any API call at about 45 seconds). If the flow is slower than that, the browser is told it is taking longer than usual and retries; the flow keeps running, and the retry finds it saved. Set `FLOW_TIMEOUT_MS` in the app settings to change the 35 seconds.
+
 ## Testing the flow on its own
 
 `npm run dev` with `FLOW_URL` set sends the real payload from your local copy, so you can test end to end before deploying:

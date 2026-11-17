@@ -14,6 +14,9 @@ const MAX_PHOTOS = 12, MAX_PHOTO_CHARS = 2e6;
 const PHOTO_RE = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
 const REF_RE = /^VPI-\d{8}-[0-9A-F]{4}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// The browser makes one key per submission and sends it again on every retry, so a retry gets the
+// same reference (and file names) as the attempt before it instead of a new one.
+const KEY_RE = /^[A-Za-z0-9-]{8,40}$/;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const str = (v, max = 2000) => String(v ?? '').slice(0, max);
@@ -129,8 +132,8 @@ function validate(f) {
   if (!any) fail('Tick at least one repair, or tick "No repairs needed" if this void needs no works.');
 }
 
-function reference(f, submittedAt) {
-  const h = crypto.createHash('sha256').update(f.id + '|' + submittedAt).digest('hex').slice(0, 4).toUpperCase();
+function reference(f, submittedAt, key) {
+  const h = crypto.createHash('sha256').update(f.id + '|' + (key || submittedAt)).digest('hex').slice(0, 4).toUpperCase();
   return `VPI-${submittedAt.slice(0, 10).replace(/-/g, '')}-${h}`;
 }
 
@@ -155,8 +158,11 @@ ${inventoryHtml(f)}${reviewUrl ? reviewButton(reviewUrl, 'Surveyor: review or ch
 
 const reviewButton = (url, text) => `<p style="margin:20px 0 4px"><a href="${esc(url)}" style="display:inline-block;background:#005291;color:#ffffff;padding:10px 18px;border-radius:999px;font-weight:bold;text-decoration:none">${esc(text)}</a></p><p style="color:#46566b;font-size:12px;margin:0">Opens the form with everything filled in. Changes create an updated PDF and update SharePoint.</p>`;
 
-// Returns { status, body }. postToFlow(json) must resolve to { ok, status, text }.
-async function handleSubmit({ headers, body }, { postToFlow, now = () => new Date() }) {
+// Returns { status, body, log }. postToFlow(json) must resolve to { ok, status, text, ms?, timedOut? }.
+// loadRecord(ref) (optional, the review load flow) resolves to { ok, status, text }: on a retry it
+// tells us whether the attempt before already went all the way through.
+// log is for the function's own logging (Application Insights) and never goes to the browser.
+async function handleSubmit({ headers, body }, { postToFlow, loadRecord, now = () => new Date() }) {
   const user = principal(headers || {});
   if (!user) return { status: 401, body: { error: 'Please sign in.' } };
   let f;
@@ -174,7 +180,14 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
   }
 
   const submittedAt = now().toISOString();
-  const ref = reference(f, submittedAt);
+  const key = typeof body.submitKey === 'string' && KEY_RE.test(body.submitKey) ? body.submitKey : '';
+  const attempt = Math.max(1, Math.min(20, Math.floor(Number(body.attempt)) || 1));
+  const ref = reference(f, submittedAt, key);
+  const log = {
+    reference: ref, attempt, user: user.email, address: VPI.addr1(f.address), pdfKB: Math.round(body.pdfBase64.length * 0.75 / 1024),
+    photos: f.rooms.reduce((n, r) => n + r.photos.length, 0),
+    earlierAttempts: (Array.isArray(body.earlierAttempts) ? body.earlierAttempts : []).slice(0, 10).map(a => ({ status: Number(a && a.status) || 0, ms: Number(a && a.ms) || 0, error: str(a && a.error, 200) })),
+  };
   const { works, inventoryItems, total, sharepointItem } = buildRows(f, ref, submittedAt, user);
   const addr = VPI.addr1(f.address);
   const officerEmail = VPI.officerEmail(f);
@@ -215,9 +228,52 @@ async function handleSubmit({ headers, body }, { postToFlow, now = () => new Dat
     emailHtml: emailHtml(f, ref, works, total, user, surveyor, reviewUrl),
   };
 
-  const res = await postToFlow(payload);
-  if (!res.ok) return { status: 502, body: { error: 'The report could not be saved just now. Nothing was lost: submit again in a minute.' } };
-  return { status: 200, body: { reference: ref, worksCount: works.length, worksValue: total } };
+  const done = { status: 200, body: { reference: ref, worksCount: works.length, worksValue: total } };
+
+  // A retry of the same submission: if the attempt before finished after the browser gave up on it
+  // (the flow carries on when the connection drops), don't save and email it a second time.
+  if (key && attempt > 1 && loadRecord) {
+    const saved = await alreadySaved(ref, loadRecord);
+    log.alreadySavedCheck = saved;
+    if (saved === 'yes') return { ...done, body: { ...done.body, alreadySaved: true }, log: { ...log, outcome: 'already saved' } };
+  }
+
+  let res;
+  try { res = await postToFlow(payload); } catch (e) { res = { ok: false, status: 0, text: String(e && e.message || e) }; }
+  log.flowStatus = res.status;
+  log.flowMs = res.ms;
+  if (!res.ok) {
+    log.outcome = res.timedOut ? 'flow timed out' : 'flow failed';
+    log.flowError = flowError(res.text);
+    const error = res.timedOut
+      ? `SharePoint is taking longer than usual to save the report (reference ${ref}). It may still go through. Nothing was lost.`
+      : `The report could not be saved to SharePoint just now (reference ${ref}). Nothing was lost.`;
+    return { status: res.timedOut ? 504 : 502, body: { error, reference: ref, retry: true, code: `flow-${res.status || 'unreachable'}` }, log };
+  }
+  return { ...done, log: { ...log, outcome: 'saved' } };
+}
+
+// 'yes', 'no' or 'unknown' (the check itself failed: carry on and submit).
+async function alreadySaved(ref, loadRecord) {
+  try {
+    const r = await loadRecord(ref);
+    if (r.status === 404) return 'no';
+    if (!r.ok) return 'unknown';
+    let j = JSON.parse(r.text);
+    if (j && typeof j.$content === 'string') j = JSON.parse(Buffer.from(j.$content, 'base64').toString('utf8'));
+    if (typeof j === 'string') j = JSON.parse(j);
+    return j && j.reference === ref ? 'yes' : 'no';
+  } catch { return 'unknown'; }
+}
+
+// The useful part of what the flow sent back when it failed, e.g. the failed action's error code.
+function flowError(text) {
+  const t = String(text || '');
+  try {
+    const j = JSON.parse(t);
+    const e = j.error || j;
+    return str([e.code, e.message].filter(Boolean).join(': ') || t, 500);
+  } catch { return str(t, 500); }
 }
 
 // Up to ten distinct, valid addresses, leaving out the person the email is sent to.
@@ -280,4 +336,4 @@ function buildRows(f, ref, submittedAt, user) {
   return { works, inventoryItems, total, sharepointItem };
 }
 
-module.exports = { handleSubmit, principal, surveyorFor, clean, validate, buildRows, ccList, siteUrl, reviewLink, reviewButton, inventoryHtml, InputError, fail, esc, money, safeName, str, CAT, MONITOR_CC, MAX_PDF_BYTES, REF_RE, EMAIL_RE };
+module.exports = { handleSubmit, alreadySaved, flowError, KEY_RE, principal, surveyorFor, clean, validate, buildRows, ccList, siteUrl, reviewLink, reviewButton, inventoryHtml, InputError, fail, esc, money, safeName, str, CAT, MONITOR_CC, MAX_PDF_BYTES, REF_RE, EMAIL_RE };
