@@ -416,7 +416,7 @@ async function doSubmit(){if(REVIEW)return doReviewSave();if(busy||!valid())retu
   // One key per submission, kept with the draft, so every retry (even after a reload) gets the same reference and can't save it twice.
   if(!S.submitKey){S.submitKey=Date.now().toString(36)+'-'+uid();await saveNow()}
   const r=await sendWithRetry('/api/submit',a=>({form:payload(),pdfBase64:b64(pdf.bytes),submitKey:S.submitKey,...a}),t=>mark(1,'run',t));
-  if(!r.ok){mark(1,'fail',r.html);say(r.say,'err');return}
+  if(!r.ok){await saveNow().catch(()=>{});mark(1,'fail',r.html);say(r.say,'err');return}
   const body=r.body;
   mark(1,'done',`Saved and emailed. Reference <span class="ref">${esc(body.reference)}</span>${body.alreadySaved?' (it had already gone through on an earlier try, so it was not sent twice)':r.tries>1?` (went through on try ${r.tries})`:''}`);
   mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
@@ -428,12 +428,20 @@ async function doSubmit(){if(REVIEW)return doReviewSave();if(busy||!valid())retu
 // Wrong answers (400), sign-in (401/403) and too large (413) are not retried. Returns
 // { ok, body, tries } or { ok:false, html, say } with the error code and time, to quote when reporting it.
 const RETRY_WAITS=[5,15,30];
+// The sign-in lasts about 8 hours. Once it expires, Static Web Apps answers API calls with a redirect to the
+// Microsoft login page, which fetch cannot follow (CSP / cross-origin), so it looked like "could not reach the server".
+// Calls use redirect:'manual' so we can spot that and send the surveyor to sign in again (the draft is kept).
+const signInUrl=()=>'/.auth/login/aad?post_login_redirect_uri='+encodeURIComponent(location.pathname+location.search);
+const SIGNED_OUT_HTML=what=>`Your sign-in has timed out, so it was not ${what}. Your entries are saved on this device. <a href="${signInUrl()}" id="signInAgain"><b>Sign in again</b></a>, then press <b>Carry on</b> and try again.`;
+const isSignedOut=res=>!!res&&(res.type==='opaqueredirect'||res.status===401||res.status===302);
+async function stillSignedIn(){try{const r=await fetch('/.auth/me',{credentials:'same-origin',redirect:'manual',cache:'no-store'});if(r.type==='opaqueredirect'||!r.ok)return false;const me=await r.json();return !!(me&&me.clientPrincipal)}catch{return null}}
 async function sendWithRetry(url,makeBody,progress){const earlier=[];let last={};
  for(let i=0;;i++){const t0=Date.now();let res=null,body={},err='';
-  try{res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(makeBody({attempt:i+1,earlierAttempts:earlier}))});body=await res.json().catch(()=>({}))}catch(e){err=String(e&&e.message||e)}
+  try{res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',redirect:'manual',body:JSON.stringify(makeBody({attempt:i+1,earlierAttempts:earlier}))});if(!isSignedOut(res))body=await res.json().catch(()=>({}))}catch(e){err=String(e&&e.message||e);if(await stillSignedIn()===false)return{ok:false,html:SIGNED_OUT_HTML('submitted'),say:'Not submitted. Your entries are still here.'}}
+  if(isSignedOut(res))return{ok:false,html:SIGNED_OUT_HTML('submitted'),say:'Not submitted. Your entries are still here.'};
   if(res&&res.ok&&body.reference)return{ok:true,body,tries:i+1};
   const status=res?res.status:0;
-  if(status===401||status===403)return{ok:false,html:'Your sign-in has expired. Reload the page to sign in again, then submit. Your entries are saved on this device.',say:'Not submitted. Your entries are still here.'};
+  if(status===403)return{ok:false,html:'You are signed in with an account that cannot submit this form. Sign in with your North Star account. Your entries are saved on this device.',say:'Not submitted. Your entries are still here.'};
   if(status===400||status===413)return{ok:false,html:esc(body.error||(status===413?'The report is too large. Remove some photos and submit again.':`The server refused the report (${status}).`)),say:'Not submitted. Your entries are still here.'};
   last={status,error:body.error||'',code:body.code||(status?'http-'+status:'no-connection'),ref:body.reference||last.ref||''};
   earlier.push({status,ms:Date.now()-t0,error:(body.code||err||'').slice(0,200)});
@@ -461,8 +469,7 @@ function paintReview(){const R=REVIEW.record,b=$('reviewBox'),past=R.history||[]
  $('reviewNotes').addEventListener('input',save);paintChanges()}
 async function startReview(){document.title='Review · Void Pre-Inspection';$('heroSub').textContent='Surveyor review';$('heroText').textContent='Check the pre-inspection, change what needs changing and save. Saving creates an updated PDF, updates SharePoint and emails the officer and everyone on the original email.';
  $('submit').textContent='Save review and update PDF';$('reset').hidden=true;$('ccWrap').hidden=true;$('openRev').hidden=true;say('');
- let res,body={};try{res=await fetch('/api/review?ref='+encodeURIComponent(REVIEW_REF),{cache:'no-store',credentials:'same-origin'});body=await res.json().catch(()=>({}))}catch{return reviewFail('Could not open the pre-inspection','Check your connection and reload the page.')}
- if(res.status===401)return reviewFail('Please sign in again','Reload the page to sign in, then open the link again.');
+ let res,body={};try{res=await fetch('/api/review?ref='+encodeURIComponent(REVIEW_REF),{cache:'no-store',credentials:'same-origin',redirect:'manual'});if(isSignedOut(res)){location.href=signInUrl();return}body=await res.json().catch(()=>({}))}catch{return reviewFail('Could not open the pre-inspection','Check your connection and reload the page.')}
  if(!res.ok)return reviewFail(res.status===403?'Surveyors only':res.status===404?'Pre-inspection not found':'Could not open the pre-inspection',body.error||`The server said ${res.status}.`);
  const rec=body.record;REVIEW={record:rec,reviewer:body.reviewer,original:rec.form};S=fromRecord(JSON.parse(JSON.stringify(rec.form)));paintFields();renderRooms();paintReview();
  const d=await Drafts.get();saveReady=true;
@@ -474,9 +481,9 @@ async function doReviewSave(){if(busy||!valid())return;busy=true;const btn=$('su
   mark(0,'run');const pdf=await makePdf(PDF_LIMIT);if(pdf.bytes.byteLength>PDF_LIMIT){mark(0,'fail','The report is too large. Remove some photos and save again.');say('The report is too large to send.','err');return}
   mark(0,'done',`Updated PDF created (${Math.round(pdf.bytes.byteLength/1024)} KB)`);const name=fileBase()+'.pdf';
   mark(1,'run');let res,body={};
-  try{res=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({reference:REVIEW.record.reference,baseRevision:REVIEW.record.revision,notes:$('reviewNotes').value,form:payload(),pdfBase64:b64(pdf.bytes)})});body=await res.json().catch(()=>({}))}
-  catch{mark(1,'fail','Could not reach the server. Check your connection and save again.');say('Not saved. Your changes are still here.','err');return}
-  if(res.status===401){mark(1,'fail','Your sign-in has expired. Reload the page to sign in again, then save.');say('Not saved. Your changes are kept on this device.','err');return}
+  try{res=await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',redirect:'manual',body:JSON.stringify({reference:REVIEW.record.reference,baseRevision:REVIEW.record.revision,notes:$('reviewNotes').value,form:payload(),pdfBase64:b64(pdf.bytes)})});if(!isSignedOut(res))body=await res.json().catch(()=>({}))}
+  catch{if(await stillSignedIn()===false){mark(1,'fail',SIGNED_OUT_HTML('saved'));say('Not saved. Your changes are kept on this device.','err');return}mark(1,'fail','Could not reach the server. Check your connection and save again.');say('Not saved. Your changes are still here.','err');return}
+  if(isSignedOut(res)){mark(1,'fail',SIGNED_OUT_HTML('saved'));say('Not saved. Your changes are kept on this device.','err');return}
   if(!res.ok){mark(1,'fail',esc(body.error||`The server refused the review (${res.status}).`));say('Not saved. Your changes are still here.','err');return}
   const n=(body.changes||[]).length;mark(1,'done',`Review ${body.revision} saved and emailed${n?` with ${n} change${n===1?'':'s'}`:', no changes'}.`);
   mark(2,'run');offerDownload(pdf.bytes,name,i=>mark(2,i.state,i.html));
